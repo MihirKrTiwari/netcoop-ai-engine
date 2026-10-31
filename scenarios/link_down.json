@@ -1,0 +1,24 @@
+{
+  "scenario_id": "scenario_link_down_01",
+  "target_device": "edge-ap-02",
+  "metadata": {
+    "site": "Hostel Zone A",
+    "uplink": "GigabitEthernet0/1"
+  },
+  "metrics": [
+    {
+      "metric_name": "oper_status",
+      "value": 0.0,
+      "unit": "status",
+      "timestamp": "2026-10-31T14:30:00Z",
+      "device_id": "edge-ap-02"
+    },
+    {
+      "metric_name": "packet_loss_pct",
+      "value": 100.0,
+      "unit": "%",
+      "timestamp": "2026-10-31T14:30:00Z",
+      "device_id": "edge-ap-02"
+    }
+  ]
+}

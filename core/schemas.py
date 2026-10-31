@@ -7,6 +7,51 @@ from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class CaseInsensitiveDict(dict):
+    """
+    A dictionary subclass that normalizes string keys to lowercase
+    for case-insensitive membership, retrieval, and assignment.
+    """
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__()
+        for k, v in dict(*args, **kwargs).items():
+            self[k] = v
+
+    def __setitem__(self, key: Any, value: Any) -> None:
+        super().__setitem__(key.strip().lower() if isinstance(key, str) else key, value)
+
+    def __getitem__(self, key: Any) -> Any:
+        return super().__getitem__(key.strip().lower() if isinstance(key, str) else key)
+
+    def __contains__(self, key: Any) -> bool:
+        return super().__contains__(key.strip().lower() if isinstance(key, str) else key)
+
+    def get(self, key: Any, default: Any = None) -> Any:
+        return super().get(key.strip().lower() if isinstance(key, str) else key, default)
+
+    def pop(self, key: Any, *args: Any) -> Any:
+        return super().pop(key.strip().lower() if isinstance(key, str) else key, *args)
+
+
+def get_metrics_by_device(payload: "RawTelemetryPayload") -> CaseInsensitiveDict:
+    """
+    Helper function to group all telemetry metrics by device_id in a case-insensitive dictionary.
+    If a metric has no device_id, it is assigned to payload.target_device.
+    """
+    result = CaseInsensitiveDict()
+    for m in payload.metrics:
+        dev = (m.device_id or payload.target_device or "").strip()
+        if dev not in result:
+            result[dev] = []
+        result[dev].append(m)
+    return result
+
+
+def get_metrics_by_device_id(payload: "RawTelemetryPayload") -> CaseInsensitiveDict:
+    """Alias for get_metrics_by_device."""
+    return get_metrics_by_device(payload)
+
+
 # ---------------------------------------------------------------------------
 # 1. Telemetry Ingestion Schemas (Standardized Inputs)
 # ---------------------------------------------------------------------------
@@ -35,6 +80,14 @@ class RawTelemetryPayload(BaseModel):
     metrics: List[TelemetryMetric] = Field(default_factory=list)
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
+    def get_metrics_by_device(self) -> CaseInsensitiveDict:
+        """Group payload metrics by device_id with case-insensitive lookup."""
+        return get_metrics_by_device(self)
+
+    def get_metrics_by_device_id(self) -> CaseInsensitiveDict:
+        """Alias for get_metrics_by_device."""
+        return get_metrics_by_device(self)
+
 
 # ---------------------------------------------------------------------------
 # 2. Inter-Agent Communication Schemas
@@ -49,6 +102,7 @@ class MetricEvidence(BaseModel):
     metric: str
     value: float
     interpretation: str
+    canonical_key: Optional[str] = None
 
 
 class AgentFinding(BaseModel):
