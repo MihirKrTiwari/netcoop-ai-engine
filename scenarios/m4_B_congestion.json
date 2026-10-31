@@ -1,0 +1,16 @@
+{
+  "scenario_id": "B_link_congestion_bufferbloat",
+  "description": "Saturated uplink: throughput pinned near line rate, high queue drops and spiking RTT (bufferbloat).",
+  "timestamp": "2026-10-31T14:30:00Z",
+  "device_id": "dist-sw-02",
+  "metrics": {
+    "throughput_mbps": 985.0,
+    "link_utilization_pct": 98.5,
+    "queue_drops": 4820,
+    "rtt_ms": 215.0,
+    "packet_loss_pct": 3.4,
+    "crc_errors": 0,
+    "interface_flaps": 0
+  },
+  "expected": {"root_cause": "link_congestion", "status": "diagnosed", "validation": "ok"}
+}
