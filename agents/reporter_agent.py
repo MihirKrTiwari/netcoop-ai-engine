@@ -198,6 +198,8 @@ class ReporterAgent:
             recommended_actions=recommendations,
             evidence_sources=arbitration.evidence_sources,
             limitations=deduped_limitations,
+            root_cause_category=arbitration.root_cause_category,
+            agents_without_data=arbitration.agents_without_data,
         )
 
     def format_terminal_summary(self, report: IncidentReport) -> str:

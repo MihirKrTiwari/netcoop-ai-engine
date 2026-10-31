@@ -226,3 +226,22 @@ class ServiceAgent(BaseAgent):
             affected_devices=affected,
             limitations=limitations,
         )
+
+    def peer_review(
+        self,
+        my_finding: AgentFinding,
+        all_findings: List[AgentFinding],
+    ) -> AgentFinding:
+        """
+        Cross-reference other agents' findings to verify transport reachability during service faults.
+        """
+        if my_finding.status != "anomaly_detected":
+            return my_finding
+
+        for other in all_findings:
+            if other.agent_name == "TelemetryAgent" and other.status == "healthy":
+                my_finding.corroborates.append("TelemetryAgent:transport_healthy")
+                my_finding.peer_assessments.append(
+                    "Service layer failure corroborated with healthy transport layer (no congestion or packet loss)."
+                )
+        return my_finding

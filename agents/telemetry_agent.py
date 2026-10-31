@@ -19,7 +19,7 @@ from statistics import pstdev
 from typing import Any, Dict, List, Optional
 
 from agents.base import BaseAgent
-from core.schemas import AgentFinding, MetricEvidence, RawTelemetryPayload, TelemetryMetric
+from core.schemas import AgentFinding, MetricEvidence, RawTelemetryPayload, TelemetryMetric, format_metric_value
 from core.timeutils import is_newer
 
 _is_newer = is_newer
@@ -407,18 +407,19 @@ class TelemetryAgent(BaseAgent):
             name_clean = m.metric_name.lower().strip()
             canonical_key: Optional[str] = None
 
-            if name_clean in {"rtt_latency_ms", "rtt_latency", "rtt", "latency", "latency_ms"}:
+            if name_clean in {"rtt_latency_ms", "rtt_latency", "rtt", "latency", "latency_ms", "rtt_ms", "rtt_s", "latency_s"}:
                 canonical_key = "latency"
-            elif name_clean in {"packet_loss_pct", "packet_loss", "loss_pct", "loss", "packet_loss_percent"}:
+            elif name_clean in {"packet_loss_pct", "packet_loss", "loss_pct", "loss", "packet_loss_percent", "packet_loss_ratio"}:
                 canonical_key = "packet_loss"
             elif name_clean in {"jitter_ms", "jitter"}:
                 canonical_key = "jitter"
-            elif name_clean in {"link_utilization_pct", "link_utilization", "utilization_pct", "utilization", "bandwidth_utilization"}:
+            elif name_clean in {"link_utilization_pct", "link_utilization", "utilization_pct", "utilization", "bandwidth_utilization", "interface_utilization"}:
                 canonical_key = "utilization"
             elif name_clean in {
                 "throughput_mbps", "throughput", "bandwidth_mbps", "rx_bandwidth_mbps",
                 "tx_bandwidth_mbps", "rx_throughput_mbps", "tx_throughput_mbps",
-                "bandwidth_bps", "throughput_bps", "data_rate_mbps", "bandwidth"
+                "bandwidth_bps", "throughput_bps", "data_rate_mbps", "bandwidth",
+                "throughput_gbps", "throughput_kbps", "egress_throughput", "ingress_throughput"
             }:
                 canonical_key = "throughput"
 
@@ -471,16 +472,17 @@ class TelemetryAgent(BaseAgent):
         high_latency = False
         if latency_metric is not None:
             high_latency = latency_metric.value > self.LATENCY_THRESHOLD_MS
+            fmt_val = format_metric_value(latency_metric.value, latency_metric.unit, "ms")
             evidence.append(
                 MetricEvidence(
                     metric=latency_metric.metric_name,
                     value=latency_metric.value,
                     canonical_key="latency",
                     interpretation=(
-                        f"Round-trip latency ({latency_metric.value:.2f}{latency_metric.unit}) exceeds SLA threshold "
-                        f"({self.LATENCY_THRESHOLD_MS}ms)."
+                        f"Round-trip latency ({fmt_val}) exceeds SLA threshold "
+                        f"({self.LATENCY_THRESHOLD_MS:.0f} ms)."
                         if high_latency
-                        else f"Round-trip latency ({latency_metric.value:.2f}{latency_metric.unit}) is within nominal limits."
+                        else f"Round-trip latency ({fmt_val}) is within nominal limits."
                     ),
                 )
             )
@@ -492,16 +494,17 @@ class TelemetryAgent(BaseAgent):
         high_loss = False
         if loss_metric is not None:
             high_loss = loss_metric.value > self.PACKET_LOSS_THRESHOLD_PCT
+            fmt_val = format_metric_value(loss_metric.value, loss_metric.unit, "%")
             evidence.append(
                 MetricEvidence(
                     metric=loss_metric.metric_name,
                     value=loss_metric.value,
                     canonical_key="packet_loss",
                     interpretation=(
-                        f"Packet loss ({loss_metric.value:.2f}{loss_metric.unit}) exceeds allowable threshold "
-                        f"({self.PACKET_LOSS_THRESHOLD_PCT}%)."
+                        f"Packet loss ({fmt_val}) exceeds allowable threshold "
+                        f"({self.PACKET_LOSS_THRESHOLD_PCT:.1f}%)."
                         if high_loss
-                        else f"Packet loss ({loss_metric.value:.2f}{loss_metric.unit}) is nominal."
+                        else f"Packet loss ({fmt_val}) is nominal."
                     ),
                 )
             )
@@ -513,16 +516,17 @@ class TelemetryAgent(BaseAgent):
         high_jitter = False
         if jitter_metric is not None:
             high_jitter = jitter_metric.value > self.JITTER_THRESHOLD_MS
+            fmt_val = format_metric_value(jitter_metric.value, jitter_metric.unit, "ms")
             evidence.append(
                 MetricEvidence(
                     metric=jitter_metric.metric_name,
                     value=jitter_metric.value,
                     canonical_key="jitter",
                     interpretation=(
-                        f"Jitter variation ({jitter_metric.value:.2f}{jitter_metric.unit}) exceeds tolerance "
-                        f"({self.JITTER_THRESHOLD_MS}ms)."
+                        f"Jitter variation ({fmt_val}) exceeds tolerance "
+                        f"({self.JITTER_THRESHOLD_MS:.0f} ms)."
                         if high_jitter
-                        else f"Jitter variation ({jitter_metric.value:.2f}{jitter_metric.unit}) is nominal."
+                        else f"Jitter variation ({fmt_val}) is nominal."
                     ),
                 )
             )
@@ -534,16 +538,17 @@ class TelemetryAgent(BaseAgent):
         high_util = False
         if util_metric is not None:
             high_util = util_metric.value > self.UTILIZATION_THRESHOLD_PCT
+            fmt_val = format_metric_value(util_metric.value, util_metric.unit, "%")
             evidence.append(
                 MetricEvidence(
                     metric=util_metric.metric_name,
                     value=util_metric.value,
                     canonical_key="utilization",
                     interpretation=(
-                        f"Link utilization ({util_metric.value:.2f}{util_metric.unit}) exceeds operational headroom "
-                        f"({self.UTILIZATION_THRESHOLD_PCT}%)."
+                        f"Link utilization ({fmt_val}) exceeds operational headroom "
+                        f"({self.UTILIZATION_THRESHOLD_PCT:.0f}%)."
                         if high_util
-                        else f"Link utilization ({util_metric.value:.2f}{util_metric.unit}) is within capacity."
+                        else f"Link utilization ({fmt_val}) is within capacity."
                     ),
                 )
             )
@@ -665,6 +670,37 @@ class TelemetryAgent(BaseAgent):
             affected_devices=affected,
             limitations=[],
         )
+
+    def peer_review(
+        self,
+        my_finding: AgentFinding,
+        all_findings: List[AgentFinding],
+    ) -> AgentFinding:
+        """
+        Cross-reference other agents' findings to corroborate transport anomalies.
+        """
+        if my_finding.status != "anomaly_detected":
+            return my_finding
+
+        for other in all_findings:
+            if other.agent_name == "InfrastructureAgent" and other.status == "anomaly_detected":
+                for ev in other.supporting_evidence:
+                    if ev.canonical_key == "queue_drops" and ev.value > 0:
+                        my_finding.corroborates.append("InfrastructureAgent:queue_drops")
+                        my_finding.peer_assessments.append(
+                            f"Observed queuing delay and packet loss corroborate egress buffer drops ({ev.value:.0f} drops) reported by InfrastructureAgent."
+                        )
+                    elif ev.canonical_key == "crc_errors" and ev.value > 0:
+                        my_finding.corroborates.append("InfrastructureAgent:crc_errors")
+                        my_finding.peer_assessments.append(
+                            f"Transport packet loss aligns with physical CRC error degradation ({ev.value:.0f} errors) reported by InfrastructureAgent."
+                        )
+            elif other.agent_name == "WirelessAgent" and other.status == "anomaly_detected":
+                my_finding.corroborates.append("WirelessAgent:rf_attenuation")
+                my_finding.peer_assessments.append(
+                    "Observed delay variation and frame drops align with degraded 802.11 RF signal reported by WirelessAgent."
+                )
+        return my_finding
 
 
 if __name__ == "__main__":

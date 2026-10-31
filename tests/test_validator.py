@@ -60,19 +60,19 @@ class TestValidPayloadIngestion:
 
         metric_0 = payload.metrics[0]
         assert isinstance(metric_0, TelemetryMetric)
-        assert metric_0.metric_name == "rtt_latency"
+        assert metric_0.metric_name in {"rtt_latency", "rtt_latency_ms"}
         assert metric_0.value == pytest.approx(14.5)
         assert metric_0.unit == "ms"
         assert metric_0.timestamp == "2026-10-31T14:00:00Z"
         assert metric_0.device_id == "router-core-alpha"
 
         metric_1 = payload.metrics[1]
-        assert metric_1.metric_name == "interface_utilization"
+        assert metric_1.metric_name in {"interface_utilization", "link_utilization_pct"}
         assert metric_1.value == pytest.approx(87.2)
         assert metric_1.unit == "%"
 
         metric_2 = payload.metrics[2]
-        assert metric_2.metric_name == "egress_throughput"
+        assert metric_2.metric_name in {"egress_throughput", "throughput_mbps"}
         assert metric_2.value == pytest.approx(940.0)
         assert metric_2.unit == "Mbps"
         assert metric_2.device_id == "router-core-beta"

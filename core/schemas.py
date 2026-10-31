@@ -1,6 +1,7 @@
 """
 core/schemas.py
-Standardized Pydantic schemas for the NetCoop AI multi-agent diagnosis engine.
+Standardized data contracts for NetCoop AI multi-agent network fault diagnosis.
+Pydantic v2 data models for input telemetry, agent findings, arbitration, and incident reports.
 """
 
 from typing import Any, Dict, List, Literal, Optional
@@ -9,8 +10,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class CaseInsensitiveDict(dict):
     """
-    A dictionary subclass that normalizes string keys to lowercase
-    for case-insensitive membership, retrieval, and assignment.
+    Case-insensitive dictionary wrapper for device IDs and entity lookups.
+    Preserves original casing for keys when iterating, but allows case-insensitive access.
     """
     def __init__(self, *args, **kwargs) -> None:
         super().__init__()
@@ -50,6 +51,20 @@ def get_metrics_by_device(payload: "RawTelemetryPayload") -> CaseInsensitiveDict
 def get_metrics_by_device_id(payload: "RawTelemetryPayload") -> CaseInsensitiveDict:
     """Alias for get_metrics_by_device."""
     return get_metrics_by_device(payload)
+
+
+def format_metric_value(val: float, unit: Optional[str] = None, default_unit: str = "") -> str:
+    """
+    Format a numeric metric value and unit cleanly with proper spacing and no 'dimensionless' leaks.
+    """
+    clean_unit = str(unit or "").strip()
+    if clean_unit.lower() in {"dimensionless", ""}:
+        clean_unit = default_unit
+    if clean_unit == "%":
+        return f"{val:.2f}%"
+    elif clean_unit:
+        return f"{val:.2f} {clean_unit}"
+    return f"{val:.2f}"
 
 
 # ---------------------------------------------------------------------------
@@ -108,7 +123,7 @@ class MetricEvidence(BaseModel):
 class AgentFinding(BaseModel):
     """
     Diagnostic assessment emitted by individual domain agents
-    (Telemetry, Infrastructure, Topology) and consumed by the Arbiter Agent.
+    (Telemetry, Infrastructure, Topology, Wireless, Service) and consumed by the Arbiter Agent.
     """
     model_config = ConfigDict(extra="ignore")
 
@@ -119,6 +134,8 @@ class AgentFinding(BaseModel):
     supporting_evidence: List[MetricEvidence] = Field(default_factory=list)
     affected_devices: List[str] = Field(default_factory=list)
     limitations: List[str] = Field(default_factory=list)
+    peer_assessments: List[str] = Field(default_factory=list)
+    corroborates: List[str] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -132,7 +149,7 @@ class IncidentReport(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     incident_id: str
-    status: Literal["diagnosed", "inconclusive", "insufficient_evidence"]
+    status: Literal["diagnosed", "inconclusive", "insufficient_evidence", "healthy"]
     suspected_root_cause: str
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     affected_devices: List[str] = Field(default_factory=list)
@@ -141,3 +158,5 @@ class IncidentReport(BaseModel):
     recommended_actions: List[str] = Field(default_factory=list)
     evidence_sources: List[str] = Field(default_factory=list)
     limitations: List[str] = Field(default_factory=list)
+    root_cause_category: Optional[str] = Field(default=None, description="Machine-readable root-cause category")
+    agents_without_data: List[str] = Field(default_factory=list, description="Agents that had no telemetry metrics to evaluate")

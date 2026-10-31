@@ -1,87 +1,188 @@
 # NetCoop AI Network Diagnostic Engine
 
-An intelligent multi-agent network fault diagnosis platform for automated incident triaging, root-cause analysis, and blast radius calculation across campus and enterprise network infrastructures.
+An intelligent, deterministic multi-agent network fault diagnosis platform designed for automated incident triaging, root-cause analysis, blast radius calculation, and cross-domain peer corroboration across enterprise and campus network infrastructures.
 
 ---
 
-## Architecture Overview
+## Architecture & Protocol Flow
 
 ```
- Raw Telemetry JSON / Dict
-           │
-           ▼
-┌─────────────────────────┐
-│ Input Validator & Sanitizer │ (core/validator.py: UTF-8 BOM, unit normalization, schema coercion)
-└────────────┬────────────┘
-             │ RawTelemetryPayload + Ingestion Notes
-             ▼
-┌──────────────────────────────────────────────────────────┐
-│               Domain Diagnostic Agents                   │
-│  - TelemetryAgent      (RTT latency, loss, jitter, util) │
-│  - InfrastructureAgent (CPU, RAM, queue drops, CRC/flaps)│
-│  - TopologyAgent       (Redundancy-aware blast radius)   │
-│  - WirelessAgent       (802.11 RSSI, SNR, retrans rate)  │
-│  - ServiceAgent        (DNS latency, DNS fail, DHCP fail)│
-└────────────────────────────┬─────────────────────────────┘
-                             │ List[AgentFinding]
-                             ▼
-┌──────────────────────────────────────────────────────────┐
-│                      Arbiter Agent                       │
-│  (agents/arbiter_agent.py: Cross-domain corroboration,    │
-│   canonical metric keys, conflict arbitration, confidence)│
-└────────────────────────────┬─────────────────────────────┘
-                             │ ArbitrationOutcome
-                             ▼
-┌──────────────────────────────────────────────────────────┐
-│                     Reporter Agent                       │
-│  (agents/reporter_agent.py: IncidentReport JSON, actions) │
-└──────────────────────────────────────────────────────────┘
+                      Raw Telemetry (JSON / Dict / File)
+                                      │
+                                      ▼
+                        ┌───────────────────────────┐
+                        │ Input Validator/Sanitizer │ (core/validator.py)
+                        │  - UTF-8 BOM stripping    │
+                        │  - Alias canonicalization │
+                        │  - Unit conversion        │
+                        │  - Schema version check   │
+                        └─────────────┬─────────────┘
+                                      │
+                         RawTelemetryPayload + Ingestion Notes
+                                      │
+                                      ▼
+                      ┌───────────────────────────────┐
+                      │    Coordinator Event Loop     │ (core/coordinator.py)
+                      │    MessageLog (JSONL Trace)   │
+                      └───────┬───────────────┬───────┘
+                              │               │
+           Dispatch Telemetry │               │
+                              ▼               ▼
+      ┌──────────────────────────────────────────────────────────────┐
+      │                   Domain Diagnostic Agents                   │
+      │  ┌────────────────────┐            ┌──────────────────────┐  │
+      │  │   TelemetryAgent   │            │ InfrastructureAgent  │  │
+      │  │ (latency, loss,    │            │ (CPU, RAM, drops,    │  │
+      │  │  jitter, util, bw) │            │  CRC, flaps, status) │  │
+      │  └─────────┬──────────┘            └──────────┬───────────┘  │
+      │            │                                  │              │
+      │  ┌─────────┴──────────┐            ┌──────────┴───────────┐  │
+      │  │    TopologyAgent   │            │    WirelessAgent     │  │
+      │  │ (blast radius, SPDF│            │ (802.11 RSSI, SNR,   │  │
+      │  │  upstream faults)  │            │  retransmissions)    │  │
+      │  └─────────┬──────────┘            └──────────┬───────────┘  │
+      │            │                       ┌──────────┴───────────┐  │
+      │            │                       │     ServiceAgent     │  │
+      │            │                       │ (DNS time/fail, DHCP)│  │
+      │            │                       └──────────┬───────────┘  │
+      └────────────┼──────────────────────────────────┼──────────────┘
+                   │                                  │
+                   │ Phase 1 Findings                 │
+                   ▼                                  ▼
+      ┌──────────────────────────────────────────────────────────────┐
+      │             Phase 2: Peer-Review Cross-Assessment            │
+      │  Agents inspect peer findings, emit cross-domain citations,  │
+      │  and attach corroborating evidence tags.                     │
+      └──────────────────────────────┬───────────────────────────────┘
+                                     │
+                        List[AgentFinding] + Reviews
+                                     │
+                                     ▼
+                      ┌─────────────────────────────┐
+                      │        Arbiter Agent        │ (agents/arbiter_agent.py)
+                      │  - Two-agent corroboration  │
+                      │  - Conflict resolution rules│
+                      │  - Mathematical confidence  │
+                      └──────────────┬──────────────┘
+                                     │ ArbitrationOutcome
+                                     ▼
+                      ┌─────────────────────────────┐
+                      │       Reporter Agent        │ (agents/reporter_agent.py)
+                      │  - Standard Challenge Schema│
+                      │  - Mitigations & Actions    │
+                      │  - Deduplicated Limitations │
+                      └──────────────┬──────────────┘
+                                     │
+                                     ▼
+                         IncidentReport (JSON / HTML)
 ```
 
 ---
 
-## Domain Agents
+## Inter-Agent Protocol Specification
 
-1. **TelemetryAgent (`agents/telemetry_agent.py`)**
-   - Monitors transport quality: `rtt_latency_ms` (> 80.0ms), `packet_loss_pct` (> 2.0%), `jitter_ms` (> 25.0ms), `link_utilization_pct` (> 80.0%), `throughput_mbps`.
-   - Filters metrics strictly by `device_id` and newest `timestamp`.
+Diagnostic agents interact via structured envelopes (`core/protocol.py: AgentMessage`) tracked in an append-only, thread-safe `MessageLog`.
 
-2. **InfrastructureAgent (`agents/infrastructure_agent.py`)**
-   - Evaluates hardware health: `cpu_utilization_pct` (> 85.0%), `memory_utilization_pct` (> 90.0%), `egress_queue_drops` (> 0), `interface_crc_errors` (> 0).
-   - Monitors link stability: `interface_errors` (> 10), `link_flaps` (> 3), `oper_status` (0 = down), `device_status` (0 = down).
+### Message Envelope Structure
 
-3. **TopologyAgent (`agents/topology_agent.py`)**
-   - Evaluates campus hierarchy adjacency graphs (`Edge AP -> Access Switch -> Distribution Router -> Core Gateway`).
-   - Computes redundancy-aware blast radius: devices with alternative redundant uplinks (e.g. `core-gw-01` backup) are not falsely marked as isolated.
-   - Deep-copies the topology graph per instance and supports loading custom topologies from payload metadata (`metadata["topology"]`).
-   - Enforces case-insensitive device lookups across all queries and graph traversals.
-   - Eliminates cycle bugs so the target start node never appears in its own downstream blast radius.
-   - Correlates multi-device telemetry: when a target device shows symptoms and an upstream transit device exhibits an active fault (high CPU, CRC errors, link down, queue drops), the upstream device is reported as the probable root cause, listing the target device as affected.
-   - Exposes case-insensitive metrics grouping helper via `BaseAgent.get_metrics_by_device(payload)`.
+```json
+{
+  "message_id": "msg-6792d4595f90",
+  "incident_id": "INC-7F7FDE62",
+  "correlation_id": "INC-7F7FDE62",
+  "schema_version": "1.0",
+  "message_type": "peer_review",
+  "sender": "TelemetryAgent",
+  "recipient": "coordinator",
+  "sequence_number": 7,
+  "created_at": "2026-10-31T14:09:39.847+00:00",
+  "timestamp": "2026-10-31T14:09:39.847+00:00",
+  "payload": {
+    "agent": "TelemetryAgent",
+    "corroborates": ["InfrastructureAgent:queue_drops"],
+    "peer_assessments": [
+      "Observed queuing delay and packet loss corroborate egress buffer drops (160 drops) reported by InfrastructureAgent."
+    ]
+  }
+}
+```
 
-4. **WirelessAgent (`agents/wireless_agent.py`)**
-   - Inspects RF characteristics: `rssi_dbm` (< -75 dBm is weak), `snr_db` (< 15 dB is poor), `retransmission_rate_pct` (> 10.0% is elevated).
+### Protocol Fields
 
-5. **ServiceAgent (`agents/service_agent.py`)**
-   - Evaluates critical network services: `dns_resolution_time_ms` (> 500ms), `dns_failure_rate_pct` (> 5.0%), `dhcp_discover_failures` (> 0).
+| Field | Type | Description |
+|---|---|---|
+| `message_id` | `str` | Globally unique message UUID prefixed with `msg-`. |
+| `incident_id` | `str` | Correlates all events belonging to a diagnostic investigation session. |
+| `schema_version` | `str` | Protocol version (`1.0`). Validated via `check_schema_compatibility()`. |
+| `message_type` | `str` | Message intent: `telemetry_ingest`, `agent_finding`, `peer_review`, `arbiter_request`, `arbiter_verdict`, `error`. |
+| `sender` | `str` | Component origin (`coordinator`, `TelemetryAgent`, etc.). |
+| `recipient` | `str` | Intended destination component. |
+| `sequence_number` | `int` | Monotonically increasing sequence number ensuring causal ordering. |
+| `created_at` | `str` | ISO-8601 UTC timestamp with millisecond precision. |
+| `payload` | `dict` | Structured data payload containing metrics, findings, or peer assessments. |
+
+### Schema Version Negotiation Rules
+1. **Compatible Minor Versions**: Schemas sharing major version `1.x` (`1.0`, `1.1`, `1.0.0`, `netcoop-v1`) are accepted in backward-compatible mode.
+2. **Incompatible Major Versions**: Versions outside `1.x` (e.g. `2.0`, `0.9`) are safely quarantined; the pipeline records an ingestion note in `IncidentReport.limitations` and proceeds in graceful fallback mode without crashing.
+3. **Missing Version**: Defaulted to `v1.0`.
 
 ---
 
-## Confidence Scoring Methodology
+## Canonical Metrics & Threshold Reference
 
-The Arbiter derives its final diagnostic confidence from a mathematically rigorous, documented formulation:
+All incoming metrics are mapped to canonical identifiers before agent analysis:
+
+| Canonical Metric Name | Canonical Key | Default Unit | Supported Aliases | Anomaly Threshold | Responsible Agent |
+|---|---|---|---|---|---|
+| `rtt_latency_ms` | `latency` | `ms` | `rtt_ms`, `rtt`, `latency_ms`, `rtt_s` (converted) | > 80.0 ms | TelemetryAgent |
+| `packet_loss_pct` | `packet_loss` | `%` | `loss_pct`, `packet_loss`, `packet_loss_ratio` | > 2.0 % | TelemetryAgent |
+| `jitter_ms` | `jitter` | `ms` | `jitter`, `delay_jitter_ms` | > 25.0 ms | TelemetryAgent |
+| `link_utilization_pct` | `utilization` | `%` | `link_utilization`, `utilization_pct`, `util` | > 80.0 % | TelemetryAgent |
+| `throughput_mbps` | `throughput` | `Mbps` | `throughput`, `bandwidth_mbps`, `throughput_gbps` | < 100.0 Mbps | TelemetryAgent |
+| `cpu_utilization_pct` | `cpu` | `%` | `cpu`, `cpu_pct`, `cpu_utilization` | > 85.0 % | InfrastructureAgent |
+| `memory_utilization_pct` | `memory` | `%` | `memory`, `ram_pct`, `system_ram_pct`, `memory_pct` | > 90.0 % | InfrastructureAgent |
+| `egress_queue_drops` | `queue_drops` | `count` | `queue_drops`, `egress_drops`, `tx_drops` | > 0 drops | InfrastructureAgent |
+| `interface_crc_errors` | `crc_errors` | `count` | `crc_errors`, `fcs_errors`, `interface_fcs_errors` | > 5 count | InfrastructureAgent |
+| `interface_errors` | `interface_errors` | `count` | `if_errors`, `port_errors`, `rx_errors` | > 10 count | InfrastructureAgent |
+| `link_flaps` | `link_flaps` | `count` | `carrier_transitions`, `flaps`, `interface_flaps` | > 3 count | InfrastructureAgent |
+| `oper_status` | `oper_status` | `state` | `link_state`, `if_oper_status`, `interface_state` | == 0 (Down) | InfrastructureAgent |
+| `device_status` | `device_status` | `state` | `node_status`, `system_health`, `device_state` | == 0 (Down) | InfrastructureAgent |
+| `rssi_dbm` | `rssi` | `dBm` | `rssi`, `signal_strength_dbm` | < -75.0 dBm | WirelessAgent |
+| `snr_db` | `snr` | `dB` | `snr`, `signal_to_noise_ratio` | < 15.0 dB | WirelessAgent |
+| `retransmission_rate_pct`| `retransmission_rate` | `%` | `retransmission_rate`, `retransmissions_pct` | > 10.0 % | WirelessAgent |
+| `dns_resolution_time_ms`| `dns_time` | `ms` | `dns_latency_ms`, `dns_resolution_time` | > 500.0 ms | ServiceAgent |
+| `dns_failure_rate_pct` | `dns_failure_rate` | `%` | `dns_failure_rate`, `dns_error_rate_pct` | > 5.0 % | ServiceAgent |
+| `dhcp_discover_failures`| `dhcp_failures` | `count` | `dhcp_failures`, `dhcp_timeouts` | > 0 count | ServiceAgent |
+| `downstream_blast_radius`| `downstream_blast_radius` | `count` | `blast_radius`, `isolated_devices` | > 0 devices | TopologyAgent |
+
+---
+
+## Status Semantics
+
+The engine outputs one of four deterministic diagnostic statuses:
+
+- `diagnosed`: Corroborated fault condition confirmed by $\ge 2$ independent agents with matching evidence.
+- `healthy`: All observed metrics fall strictly within nominal bounds, with required core telemetry present.
+- `inconclusive`: Anomaly detected by a single domain agent without corroboration, or contradictory cross-domain signals. Confidence is capped at $\le 0.50$.
+- `insufficient_evidence`: Critical baseline telemetry is missing, or input data was corrupt/unusable. Exact root cause is never claimed. Confidence is set to $0.00$.
+
+---
+
+## Confidence Scoring Formula
+
+The Arbiter derives its final diagnostic confidence from a mathematically scored formulation:
 
 $$\text{Confidence} = \text{Weighted Agent Confidence} \times \text{Corroboration Factor} \times \text{Data Completeness}$$
 
 ### 1. Weighted Agent Confidence
-The confidence scores of domain agents providing supporting evidence are averaged according to domain authority weights:
+Domain agents providing supporting evidence are averaged according to domain authority weights:
 - **InfrastructureAgent**: `1.2` (Hardware registers and physical counters)
 - **WirelessAgent**: `1.1` (802.11 RF physical layer parameters)
 - **TelemetryAgent**: `1.0` (Transport and QoS latency/loss metrics)
 - **ServiceAgent**: `1.0` (Application layer service metrics)
 - **TopologyAgent**: `0.8` (Graph topology and blast radius context)
 
-$$\text{Weighted Agent Confidence} = \frac{\sum (c_i \times w_i)}{\sum w_i}$$
+$$\text{Weighted Confidence} = \frac{\sum (c_i \times w_i)}{\sum w_i}$$
 
 ### 2. Corroboration Factor
 Enforces cross-domain consensus across distinct agent domains:
@@ -90,7 +191,7 @@ Enforces cross-domain consensus across distinct agent domains:
 - **$1$ contributing agent**: `0.50` (Uncorroborated single-agent penalty)
 - **$0$ contributing agents**: `0.00`
 
-> **Strict Corroboration Rule**: A diagnosis of `"diagnosed"` is never issued on a single metric or a single agent's finding. At least 2 corroborating evidence items from at least 2 distinct agents are required. Any uncorroborated single-agent finding is automatically degraded to `"inconclusive"` with confidence capped at $\le 0.50$.
+> **Safety Invariant**: A diagnosis of `"diagnosed"` is NEVER issued on a single metric or a single agent's finding. Uncorroborated single-agent findings are automatically degraded to `"inconclusive"` with confidence capped at $\le 0.50$.
 
 ### 3. Data Completeness
 Reflects the ratio of observed relevant metrics to the expected baseline metrics:
@@ -99,90 +200,75 @@ $$\text{Data Completeness} = \min\left(1.0, 0.70 + 0.30 \times \frac{\min(\text{
 
 ---
 
-## Diagnostic Rules & Conflict Arbitration
+## Ingestion & Error Handling Resilience
 
-1. **Node Shutdown / Link Down**: Highest Layer 1/2 precedence. Explicit `device_status == 0` or `oper_status == 0` overrides downstream telemetry symptoms.
-2. **Actionable CRC vs Weak Counters**: CRC/FCS counters $\le 5.0$ are treated as weak/incidental evidence and do not trigger physical degradation alarms without counter growth or transport packet drops.
-3. **WAN Transit Delay vs Local Congestion**: High latency with normal utilization is only diagnosed as WAN transit delay if explicit infrastructure evidence confirms zero queue drops (`egress_queue_drops == 0`) and normal CPU (`cpu <= 85%`). Missing data is not evidence of absence.
-4. **Weak Wi-Fi Interference**: Corroborates weak RSSI/SNR with high frame retransmissions.
-5. **DNS/DHCP Service Outages**: Confirmed only when transport layer metrics (latency, loss, utilization) remain healthy.
-6. **Dynamic Alternative Hypotheses**: `alternative_causes` are constructed dynamically from competing agent hypotheses rather than hardcoded canned lists.
-
----
-
-## Installation & Setup
-
-```bash
-# Create and activate virtual environment
-python3 -m venv .venv
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-```
+NetCoop AI is hardened against real-world data corruption:
+- **Dirty Data Coercion**: Coerces stringified numbers (`"4.2%"`, `"12 ms"`, `"0.150s"`), strips units embedded inside values, and logs conversions in `limitations`.
+- **Flat & Nested Ingestion**: Transparently parses dictionary metrics (`{"rtt_ms": 10}`), list metrics, and renamed keys (`target` -> `target_device`).
+- **Timestamp Unification**: `core/timeutils.py` chronologically parses ISO-8601 (naive or timezone-aware with Z or `+05:30` offsets) and epoch seconds/milliseconds.
+- **Corrupt Payload Isolation**: All-corrupt or unparseable input files degrade gracefully to `insufficient_evidence` with clear notes and zero tracebacks.
+- **Agent Fault Isolation**: Each agent analysis is wrapped in `try/except`. If an agent throws an unhandled exception, it emits an `insufficient_evidence` finding and the remaining agents successfully complete diagnosis.
 
 ---
 
-## Execution & CLI Usage
+## CLI Usage & Demo Commands
 
-### Run Diagnostic Scenarios
+### 1. Batch Scenario Execution & Summary Table
+Execute all scenarios in batch mode and verify results against expected blocks:
 ```bash
-# Link congestion scenario (High latency, 94% utilization, queue drops)
-python main.py --scenario scenarios/link_congestion.json
-
-# Normal operations baseline (Healthy metrics, edge AP)
-python main.py --scenario scenarios/normal_ops.json
-
-# Wi-Fi RF signal attenuation & frame retransmission storms
-python main.py --scenario scenarios/weak_wifi.json
-
-# Layer 2 interface flapping and packet errors
-python main.py --scenario scenarios/interface_fault.json
-
-# Application service outage (DNS timeouts & DHCP discover exhaustion)
-python main.py --scenario scenarios/dns_dhcp_failure.json
-
-# Cross-device upstream root cause fault propagation
-python main.py --scenario scenarios/upstream_root_cause.json
-
-# Layer 1/2 operational link down
-python main.py --scenario scenarios/link_down.json
-
-# Single-metric input resilience (never diagnosed, degraded to inconclusive)
-python main.py --scenario scenarios/single_metric_insufficient.json
-
-# Interoperability tests (renamed fields, dictionary metrics, unit in value)
-python main.py --scenario scenarios/interop_renamed_fields.json
-python main.py --scenario scenarios/interop_dict_metrics.json
-python main.py --scenario scenarios/interop_unit_in_value.json
-python main.py --scenario scenarios/malformed_data.json
+python main.py --scenario-dir scenarios --summary
+```
+Output:
+```
+=========================================================================================================
+Scenario File                Status           Category / Root Cause                Conf   Result  
+=========================================================================================================
+m4_A_healthy.json            diagnosed        healthy                              0.92   [PASS]  
+m4_B_congestion.json         diagnosed        link_congestion                      0.95   [PASS]  
+m4_C_link_flap.json          diagnosed        hardware_link_flap                   0.94   [PASS]  
+m4_D_dirty_data.json         diagnosed        link_congestion                      0.95   [PASS]  
+m4_E_corrupt.json            insufficient_evidence insufficient_evidence                0.00   [PASS]  
+link_congestion.json         diagnosed        link_congestion                      0.95   [INFO]  
+normal_ops.json              diagnosed        healthy                              0.92   [INFO]  
+...
+=========================================================================================================
+Scenarios with expectations: 5/5 PASSED
 ```
 
-### Save Incident Report to File
+### 2. Export Inter-Agent Protocol Message Log (JSONL)
 ```bash
-python main.py --scenario scenarios/link_congestion.json --output report.json
+python main.py --scenario scenarios/link_congestion.json --message-log out/messages.jsonl
 ```
 
-### Run Comprehensive Test Suite
+### 3. Live Protocol Message Trace
 ```bash
+python main.py --scenario scenarios/link_congestion.json --trace
+```
+
+### 4. Visual HTML Dashboard Report
+Generate a visual standalone HTML report:
+```bash
+python main.py --scenario scenarios/link_congestion.json --html out/dashboard.html
+```
+
+### 5. Generate Deterministic Synthetic Scenarios
+Generate benchmark test scenarios using a fixed random seed:
+```bash
+python scripts/generate_scenarios.py --seed 42 --out-dir scenarios/generated
+python main.py --scenario-dir scenarios/generated --summary
+```
+
+---
+
+## Running Test Suite
+
+```bash
+# Run all unit, integration, protocol, and end-to-end tests
 pytest -v
+
+# Run Member 4 scenario tests specifically
+pytest tests/test_m4_e2e.py -v
+
+# Run protocol envelope and message log tests
+pytest tests/test_protocol.py -v
 ```
-
-## Infrastructure Health Agent
-
-Checks the device itself: CPU, memory, egress queue drops, CRC/interface errors, link flaps and device/link status. Input is `RawTelemetryPayload`; output is `AgentFinding` (status, hypothesis, confidence 0-1, evidence, affected devices, limitations).
-
-| Check | Flagged when | Diagnosis | Confidence |
-|---|---|---|---|
-| Device status | = 0 (down) | Node shutdown / hardware failure | 0.96 |
-| Link state | = 0 (down) | Interface link-down | 0.95 |
-| Link flaps | > 3 | Link instability | 0.93 |
-| CRC + queue drops | both > 0 | Cabling fault causing queue exhaustion | 0.95 |
-| CRC / interface errors | > 0 | Cabling or transceiver degradation | 0.92 |
-| Queue drops + high CPU/memory | drops > 0 and CPU > 85% or memory > 90% | Resource saturation | 0.90 |
-| CPU + memory | CPU > 85% and memory > 90% | Control-plane exhaustion | 0.94 |
-| Queue drops only | > 0 | Buffer overflow (congestion) | 0.88 |
-| CPU or memory only | above threshold | CPU spike / memory exhaustion | 0.85 |
-| Normal readings | within limits | Healthy | 0.92 |
-
-Rules are checked top to bottom and the first match wins. Confidence reflects how direct the evidence is: hard failures and physical errors score highest, a single resource spike lowest. Units: percentages (ratios are converted), counts, and state values (0 = down). The newest sample per metric is used, and only the target device's metrics. The agent flags any non-zero CRC count; the Arbiter then treats CRC counts of 5 or less as weak evidence unless other symptoms corroborate them. If no CPU or memory metric exists the agent returns insufficient evidence (0.45); with no usable metrics at all, 0.0. Missing metrics are listed under limitations. Tests: `tests/test_infrastructure.py`.

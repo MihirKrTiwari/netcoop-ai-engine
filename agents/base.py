@@ -53,5 +53,16 @@ class BaseAgent(ABC):
         """
         raise NotImplementedError("Subclasses of BaseAgent must implement analyze().")
 
+    def peer_review(
+        self,
+        my_finding: AgentFinding,
+        all_findings: List[AgentFinding],
+    ) -> AgentFinding:
+        """
+        Optional peer-review callback allowing an agent to cross-reference other agents'
+        findings and attach assessments or corroborations.
+        """
+        return my_finding
+
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}(name='{self.name}')>"

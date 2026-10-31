@@ -239,3 +239,22 @@ class WirelessAgent(BaseAgent):
             affected_devices=affected,
             limitations=limitations,
         )
+
+    def peer_review(
+        self,
+        my_finding: AgentFinding,
+        all_findings: List[AgentFinding],
+    ) -> AgentFinding:
+        """
+        Cross-reference other agents' findings to corroborate wireless RF degradation.
+        """
+        if my_finding.status != "anomaly_detected":
+            return my_finding
+
+        for other in all_findings:
+            if other.agent_name == "TelemetryAgent" and other.status == "anomaly_detected":
+                my_finding.corroborates.append("TelemetryAgent:jitter_loss")
+                my_finding.peer_assessments.append(
+                    "Wireless RF degradation aligns with delay variation and packet loss observed by TelemetryAgent."
+                )
+        return my_finding

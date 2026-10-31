@@ -678,3 +678,19 @@ class TopologyAgent(BaseAgent):
             affected_devices=affected,
             limitations=[],
         )
+
+    def peer_review(
+        self,
+        my_finding: AgentFinding,
+        all_findings: List[AgentFinding],
+    ) -> AgentFinding:
+        """
+        Cross-reference other agents' findings to corroborate topology blast radius and fault scope.
+        """
+        for other in all_findings:
+            if other.agent_name in {"TelemetryAgent", "InfrastructureAgent"} and other.status == "anomaly_detected":
+                my_finding.corroborates.append(f"{other.agent_name}:anomaly")
+                my_finding.peer_assessments.append(
+                    f"Topology dependency graph confirms blast radius and failure scope for {other.agent_name} anomaly."
+                )
+        return my_finding

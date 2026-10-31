@@ -412,3 +412,29 @@ class InfrastructureAgent(BaseAgent):
             affected_devices=affected,
             limitations=limitations,
         )
+
+    def peer_review(
+        self,
+        my_finding: AgentFinding,
+        all_findings: List[AgentFinding],
+    ) -> AgentFinding:
+        """
+        Cross-reference other agents' findings to corroborate infrastructure hardware faults.
+        """
+        if my_finding.status != "anomaly_detected":
+            return my_finding
+
+        for other in all_findings:
+            if other.agent_name == "TelemetryAgent" and other.status == "anomaly_detected":
+                for ev in other.supporting_evidence:
+                    if ev.canonical_key in {"latency", "utilization"} and ev.value > 80.0:
+                        my_finding.corroborates.append(f"TelemetryAgent:{ev.canonical_key}")
+                        my_finding.peer_assessments.append(
+                            f"Hardware buffer and error telemetry aligns with high transport {ev.canonical_key} ({ev.value:.1f}) reported by TelemetryAgent."
+                        )
+            elif other.agent_name == "TopologyAgent" and other.status == "anomaly_detected":
+                my_finding.corroborates.append("TopologyAgent:blast_radius")
+                my_finding.peer_assessments.append(
+                    "Fault impact scope corroborated by TopologyAgent topological dependency mapping."
+                )
+        return my_finding
