@@ -1,6 +1,6 @@
 """
 core package initialization.
-Exports standardized schemas and the ingestion validator for NetCoop AI.
+Exports standardized schemas and ingestion validator for NetCoop AI.
 """
 
 from core.schemas import (

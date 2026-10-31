@@ -13,7 +13,7 @@ from core.schemas import AgentFinding, MetricEvidence, RawTelemetryPayload
 
 CAMPUS_TOPOLOGY: Dict[str, Dict[str, List[str]]] = {
     # Core Gateway Layer
-    "core-gw-01": {"upstream": [], "downstream": ["dist-rtr-01", "dist-rtr-02"]},
+    "core-gw-01": {"upstream": [], "downstream": ["dist-rtr-01", "dist-rtr-02", "HOSTEL_CORE_SW_01"]},
     "core-gw-02": {"upstream": [], "downstream": ["dist-rtr-02"]},
 
     # Distribution Router Layer
@@ -33,6 +33,15 @@ CAMPUS_TOPOLOGY: Dict[str, Dict[str, List[str]]] = {
     "edge-ap-04": {"upstream": ["acc-sw-03"], "downstream": []},
     "edge-ap-05": {"upstream": ["acc-sw-03"], "downstream": []},
     "edge-ap-06": {"upstream": ["acc-sw-04"], "downstream": []},
+
+    # Hostel Distribution & Access Sub-Tree
+    "HOSTEL_CORE_SW_01": {"upstream": ["core-gw-01"], "downstream": ["HOSTEL_ACC_SW_01", "HOSTEL_ACC_SW_02"]},
+    "HOSTEL_ACC_SW_01": {"upstream": ["HOSTEL_CORE_SW_01"], "downstream": ["HOSTEL_AP_01", "HOSTEL_AP_02"]},
+    "HOSTEL_ACC_SW_02": {"upstream": ["HOSTEL_CORE_SW_01"], "downstream": ["HOSTEL_AP_03", "HOSTEL_AP_04"]},
+    "HOSTEL_AP_01": {"upstream": ["HOSTEL_ACC_SW_01"], "downstream": []},
+    "HOSTEL_AP_02": {"upstream": ["HOSTEL_ACC_SW_01"], "downstream": []},
+    "HOSTEL_AP_03": {"upstream": ["HOSTEL_ACC_SW_02"], "downstream": []},
+    "HOSTEL_AP_04": {"upstream": ["HOSTEL_ACC_SW_02"], "downstream": []},
 }
 
 

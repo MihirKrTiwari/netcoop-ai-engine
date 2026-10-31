@@ -1,3 +1,46 @@
 {
-  "_description": "Add intentionally invalid or incomplete scenario payloads for validation and robustness tests."
+  "scenario_id": "malformed_resilience_test_01",
+  "target_device": "HOSTEL_CORE_SW_01",
+  "metadata": {
+    "test_purpose": "Ingestion Sanitizer Robustness",
+    "dirty_data": true
+  },
+  "metrics": [
+    {
+      "metric_name": "rtt_latency_ms",
+      "value": "0.1425",
+      "unit": "s",
+      "device_id": "HOSTEL_CORE_SW_01"
+    },
+    {
+      "metric_name": "link_utilization_pct",
+      "value": " 94.0 ",
+      "unit": "PERCENT"
+    },
+    {
+      "metric_name": "egress_queue_drops",
+      "value": "160",
+      "unit": "count"
+    },
+    {
+      "metric_name": "packet_loss_pct",
+      "value": "0.042",
+      "unit": "ratio"
+    },
+    {
+      "metric_name": "interface_crc_errors",
+      "value": "0",
+      "unit": "count"
+    },
+    {
+      "metric_name": "corrupt_metric_drop_me",
+      "value": "INVALID_VALUE",
+      "unit": "unknown"
+    },
+    {
+      "metric_name": "cpu_utilization_pct",
+      "value": "48.0",
+      "unit": "%"
+    }
+  ]
 }

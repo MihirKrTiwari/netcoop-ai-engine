@@ -1,1 +1,131 @@
-# Coordinate agent execution, message exchange, and the end-to-end analysis workflow.
+"""
+core/coordinator.py
+Orchestration layer for NetCoop AI multi-agent fault diagnosis engine.
+Connects the full pipeline: Input Sanitization -> Domain Agents -> Arbiter -> Reporter.
+"""
+
+import concurrent.futures
+import json
+import logging
+from typing import Any, Dict, List, Optional, Union
+
+from agents.arbiter_agent import ArbiterAgent
+from agents.infrastructure_agent import InfrastructureAgent
+from agents.reporter_agent import ReporterAgent
+from agents.telemetry_agent import TelemetryAgent
+from agents.topology_agent import TopologyAgent
+from core.schemas import AgentFinding, IncidentReport, RawTelemetryPayload
+from core.validator import validate_and_sanitize_payload
+
+logger = logging.getLogger(__name__)
+
+
+class NetCoopCoordinator:
+    """
+    Main orchestration engine executing end-to-end multi-agent network fault diagnosis.
+    """
+
+    def __init__(
+        self,
+        telemetry_agent: Optional[TelemetryAgent] = None,
+        infrastructure_agent: Optional[InfrastructureAgent] = None,
+        topology_agent: Optional[TopologyAgent] = None,
+        arbiter_agent: Optional[ArbiterAgent] = None,
+        reporter_agent: Optional[ReporterAgent] = None,
+        parallel_execution: bool = True,
+    ) -> None:
+        self.telemetry_agent = telemetry_agent if telemetry_agent is not None else TelemetryAgent()
+        self.infrastructure_agent = infrastructure_agent if infrastructure_agent is not None else InfrastructureAgent()
+        self.topology_agent = topology_agent if topology_agent is not None else TopologyAgent()
+        self.arbiter_agent = arbiter_agent if arbiter_agent is not None else ArbiterAgent()
+        self.reporter_agent = reporter_agent if reporter_agent is not None else ReporterAgent()
+        self.parallel_execution = parallel_execution
+
+    def _execute_domain_agents(self, payload: RawTelemetryPayload) -> List[AgentFinding]:
+        """
+        Execute domain diagnostic agents either in parallel worker threads or sequentially.
+        """
+        if self.parallel_execution:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+                future_telemetry = executor.submit(self.telemetry_agent.analyze, payload)
+                future_infra = executor.submit(self.infrastructure_agent.analyze, payload)
+                future_topo = executor.submit(self.topology_agent.analyze, payload)
+
+                findings: List[AgentFinding] = [
+                    future_telemetry.result(),
+                    future_infra.result(),
+                    future_topo.result(),
+                ]
+            return findings
+
+        return [
+            self.telemetry_agent.analyze(payload),
+            self.infrastructure_agent.analyze(payload),
+            self.topology_agent.analyze(payload),
+        ]
+
+    def run(
+        self,
+        raw_input: Union[Dict[str, Any], RawTelemetryPayload, str, Any],
+        incident_id: Optional[str] = None,
+    ) -> IncidentReport:
+        """
+        Execute the end-to-end diagnosis pipeline on a raw payload dictionary,
+        RawTelemetryPayload object, or JSON string.
+
+        Args:
+            raw_input: Raw dictionary, RawTelemetryPayload, or JSON string representing incoming telemetry.
+            incident_id: Optional override for the incident report identifier.
+
+        Returns:
+            IncidentReport matching the challenge schema.
+        """
+        if isinstance(raw_input, RawTelemetryPayload):
+            sanitized_payload = raw_input
+        elif isinstance(raw_input, str):
+            try:
+                raw_dict = json.loads(raw_input)
+            except Exception as json_err:
+                logger.error("Failed to parse JSON string: %s", json_err)
+                raw_dict = {"scenario_id": "malformed_json_str", "metrics": []}
+            sanitized_payload = validate_and_sanitize_payload(raw_dict)
+        else:
+            sanitized_payload = validate_and_sanitize_payload(raw_input)
+
+        # 2. Multi-Agent Domain Analysis
+        findings: List[AgentFinding] = self._execute_domain_agents(sanitized_payload)
+
+        # 3. Arbitration and Conflict Resolution
+        arbitration = self.arbiter_agent.arbitrate(
+            findings=findings,
+            target_device=sanitized_payload.target_device,
+        )
+
+        # 4. Final Incident Reporting
+        report: IncidentReport = self.reporter_agent.generate_report(
+            arbitration=arbitration,
+            incident_id=incident_id,
+            scenario_id=sanitized_payload.scenario_id,
+        )
+
+        return report
+
+    def run_from_file(
+        self,
+        filepath: str,
+        incident_id: Optional[str] = None,
+    ) -> IncidentReport:
+        """
+        Load telemetry data from a JSON file and execute the diagnosis pipeline.
+
+        Args:
+            filepath: Path to the JSON telemetry file.
+            incident_id: Optional override for the incident report identifier.
+
+        Returns:
+            IncidentReport generated by the diagnosis engine.
+        """
+        with open(filepath, "r", encoding="utf-8") as f:
+            raw_data = json.load(f)
+
+        return self.run(raw_input=raw_data, incident_id=incident_id)
