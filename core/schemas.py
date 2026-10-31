@@ -1,0 +1,1 @@
+# Define Pydantic models for validated inputs, agent findings, messages, and reports.

@@ -1,0 +1,1 @@
+# Define the shared agent protocol or base class, including common inputs, outputs, and behavior.

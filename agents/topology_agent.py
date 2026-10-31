@@ -1,0 +1,1 @@
+# Implement connectivity and network-topology analysis, including affected paths and links.

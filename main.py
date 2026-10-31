@@ -1,0 +1,1 @@
+# Parse CLI options, load a scenario, run the coordinator, and display the report.

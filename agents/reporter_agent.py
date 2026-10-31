@@ -1,0 +1,1 @@
+# Turn validated agent findings into concise recommendations and user-facing reports.
