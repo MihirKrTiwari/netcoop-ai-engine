@@ -1,3 +1,69 @@
 {
-  "_description": "Add network metrics and topology data that exercise link-congestion detection and recommendations."
+  "scenario_id": "link_congestion_001",
+  "target_device": "HOSTEL_CORE_SW_01",
+  "metadata": {
+    "site": "Hostel Zone A",
+    "device_role": "Distribution Core Switch",
+    "uplink_interface": "TenGigabitEthernet1/0/1",
+    "environment": "Campus Production",
+    "reported_by": "Hostel NetOps Monitoring"
+  },
+  "metrics": [
+    {
+      "metric_name": "rtt_latency_ms",
+      "value": 142.5,
+      "unit": "ms",
+      "timestamp": "2026-10-31T14:30:00Z",
+      "device_id": "HOSTEL_CORE_SW_01"
+    },
+    {
+      "metric_name": "link_utilization_pct",
+      "value": 94.0,
+      "unit": "%",
+      "timestamp": "2026-10-31T14:30:00Z",
+      "device_id": "HOSTEL_CORE_SW_01"
+    },
+    {
+      "metric_name": "egress_queue_drops",
+      "value": 160.0,
+      "unit": "count",
+      "timestamp": "2026-10-31T14:30:00Z",
+      "device_id": "HOSTEL_CORE_SW_01"
+    },
+    {
+      "metric_name": "packet_loss_pct",
+      "value": 4.2,
+      "unit": "%",
+      "timestamp": "2026-10-31T14:30:00Z",
+      "device_id": "HOSTEL_CORE_SW_01"
+    },
+    {
+      "metric_name": "jitter_ms",
+      "value": 28.5,
+      "unit": "ms",
+      "timestamp": "2026-10-31T14:30:00Z",
+      "device_id": "HOSTEL_CORE_SW_01"
+    },
+    {
+      "metric_name": "interface_crc_errors",
+      "value": 0.0,
+      "unit": "count",
+      "timestamp": "2026-10-31T14:30:00Z",
+      "device_id": "HOSTEL_CORE_SW_01"
+    },
+    {
+      "metric_name": "cpu_utilization_pct",
+      "value": 48.0,
+      "unit": "%",
+      "timestamp": "2026-10-31T14:30:00Z",
+      "device_id": "HOSTEL_CORE_SW_01"
+    },
+    {
+      "metric_name": "memory_utilization_pct",
+      "value": 62.0,
+      "unit": "%",
+      "timestamp": "2026-10-31T14:30:00Z",
+      "device_id": "HOSTEL_CORE_SW_01"
+    }
+  ]
 }

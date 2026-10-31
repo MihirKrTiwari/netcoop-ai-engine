@@ -1,0 +1,47 @@
+{
+  "scenario_id": "scenario_weak_wifi_01",
+  "target_device": "edge-ap-01",
+  "metadata": {
+    "site": "Hostel Zone B",
+    "device_role": "Campus 802.11 Access Point",
+    "ssid": "IIT_CAMPUS_SECURE",
+    "environment": "Student Residence Hall"
+  },
+  "metrics": [
+    {
+      "metric_name": "rssi_dbm",
+      "value": -84.0,
+      "unit": "dBm",
+      "timestamp": "2026-10-31T14:30:00Z",
+      "device_id": "edge-ap-01"
+    },
+    {
+      "metric_name": "snr_db",
+      "value": 9.0,
+      "unit": "dB",
+      "timestamp": "2026-10-31T14:30:00Z",
+      "device_id": "edge-ap-01"
+    },
+    {
+      "metric_name": "retransmission_rate_pct",
+      "value": 26.5,
+      "unit": "%",
+      "timestamp": "2026-10-31T14:30:00Z",
+      "device_id": "edge-ap-01"
+    },
+    {
+      "metric_name": "packet_loss_pct",
+      "value": 4.8,
+      "unit": "%",
+      "timestamp": "2026-10-31T14:30:00Z",
+      "device_id": "edge-ap-01"
+    },
+    {
+      "metric_name": "rtt_latency_ms",
+      "value": 42.0,
+      "unit": "ms",
+      "timestamp": "2026-10-31T14:30:00Z",
+      "device_id": "edge-ap-01"
+    }
+  ]
+}

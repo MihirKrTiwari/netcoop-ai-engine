@@ -1,3 +1,67 @@
 {
-  "_description": "Add representative healthy network telemetry and infrastructure data for a normal-operations scenario."
+  "scenario_id": "normal_ops_001",
+  "target_device": "edge-ap-01",
+  "metadata": {
+    "site": "Campus Academic Block",
+    "device_role": "Edge Access Point",
+    "environment": "Production Baseline"
+  },
+  "metrics": [
+    {
+      "metric_name": "rtt_latency_ms",
+      "value": 14.5,
+      "unit": "ms",
+      "timestamp": "2026-10-31T14:30:00Z",
+      "device_id": "edge-ap-01"
+    },
+    {
+      "metric_name": "packet_loss_pct",
+      "value": 0.1,
+      "unit": "%",
+      "timestamp": "2026-10-31T14:30:00Z",
+      "device_id": "edge-ap-01"
+    },
+    {
+      "metric_name": "jitter_ms",
+      "value": 2.0,
+      "unit": "ms",
+      "timestamp": "2026-10-31T14:30:00Z",
+      "device_id": "edge-ap-01"
+    },
+    {
+      "metric_name": "link_utilization_pct",
+      "value": 35.0,
+      "unit": "%",
+      "timestamp": "2026-10-31T14:30:00Z",
+      "device_id": "edge-ap-01"
+    },
+    {
+      "metric_name": "cpu_utilization_pct",
+      "value": 28.0,
+      "unit": "%",
+      "timestamp": "2026-10-31T14:30:00Z",
+      "device_id": "edge-ap-01"
+    },
+    {
+      "metric_name": "memory_utilization_pct",
+      "value": 45.0,
+      "unit": "%",
+      "timestamp": "2026-10-31T14:30:00Z",
+      "device_id": "edge-ap-01"
+    },
+    {
+      "metric_name": "egress_queue_drops",
+      "value": 0.0,
+      "unit": "count",
+      "timestamp": "2026-10-31T14:30:00Z",
+      "device_id": "edge-ap-01"
+    },
+    {
+      "metric_name": "interface_crc_errors",
+      "value": 0.0,
+      "unit": "count",
+      "timestamp": "2026-10-31T14:30:00Z",
+      "device_id": "edge-ap-01"
+    }
+  ]
 }

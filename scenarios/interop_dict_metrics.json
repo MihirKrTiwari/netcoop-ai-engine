@@ -1,0 +1,14 @@
+{
+  "scenario_id": "scenario_interop_dict_metrics_01",
+  "target_device": "HOSTEL_CORE_SW_01",
+  "metadata": {
+    "telemetry_format": "key_value_map",
+    "source": "PrometheusPushgateway"
+  },
+  "metrics": {
+    "rtt_latency_ms": 142.5,
+    "egress_queue_drops": 160.0,
+    "link_utilization_pct": 94.0,
+    "packet_loss_pct": 4.2
+  }
+}
