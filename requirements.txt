@@ -1,1 +1,2 @@
-# List runtime and development Python dependencies, with compatible version constraints.
+   pydantic>=2.0
+   pytest>=7.0

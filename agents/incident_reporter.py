@@ -77,14 +77,20 @@ def _clamp(value: Any) -> float:
 
 def _family(root_cause: Any) -> str:
     s = str(root_cause or "").strip().lower().replace("-", "_").replace(" ", "_")
-    if not s or any(k in s for k in ("insufficient", "unknown", "inconclusive")):
+    tokens = [t for t in re.split(r"[^a-z0-9]+", s) if t]
+
+    def has(*stems: str) -> bool:  # whole-word / word-prefix match, not substring
+        return any(t.startswith(st) for t in tokens for st in stems)
+
+    if not tokens or has("insufficient", "unknown", "inconclusive"):
         return "insufficient_evidence"
-    if any(k in s for k in ("healthy", "normal", "baseline", "no_fault")):
-        return "healthy"
-    if any(k in s for k in ("congest", "bufferbloat", "queue", "saturat")):
+    if has("congest", "bufferbloat", "queue", "saturat"):
         return "congestion"
-    if any(k in s for k in ("crc", "flap", "hardware", "cable", "optic", "physical")):
+    if has("crc", "flap", "hardware", "cable", "optic", "physical"):
         return "hardware"
+    negated = any(t in ("unhealthy", "abnormal", "not") for t in tokens)
+    if not negated and (has("healthy", "normal", "baseline") or "no_fault" in s):
+        return "healthy"
     return "unclassified"
 
 
