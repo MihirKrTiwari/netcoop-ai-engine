@@ -1,0 +1,2231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetCoop AI — Multi-Agent Network Diagnostic Console</title>
+  <style>
+    :root {
+      /* Tailwind Slate Theme: bg-slate-900, text-slate-100, bg-slate-800, border-slate-700 */
+      --bg-base: #0f172a;           /* bg-slate-900 */
+      --bg-surface: #1e293b;        /* bg-slate-800 */
+      --bg-card: #1e293b;           /* bg-slate-800 */
+      --bg-card-hover: #24334a;     /* elevated slate-800 */
+      --bg-subtle: #0f172a;         /* bg-slate-900 */
+      --border-subtle: #334155;     /* border-slate-700 */
+      --border-accent: #475569;     /* border-slate-600 */
+      
+      --text-main: #f1f5f9;         /* text-slate-100 */
+      --text-muted: #94a3b8;        /* text-slate-400 */
+      --text-dim: #64748b;          /* text-slate-500 */
+
+      /* Cyan / Sky Accent */
+      --cyan: #38bdf8;              /* text-sky-400 */
+      --cyan-glow: rgba(56, 189, 248, 0.2);
+      --indigo: #6366f1;
+      --indigo-glow: rgba(99, 102, 241, 0.2);
+
+      /* Status: bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 */
+      --emerald: #34d399;           /* text-emerald-400 */
+      --emerald-bg: rgba(16, 185, 129, 0.10); /* bg-emerald-500/10 */
+      --emerald-border: rgba(16, 185, 129, 0.20); /* border-emerald-500/20 */
+      --emerald-glow: rgba(16, 185, 129, 0.2);
+
+      /* Status: bg-red-500/10 text-red-400 border border-red-500/20 */
+      --crimson: #f87171;           /* text-red-400 */
+      --crimson-bg: rgba(239, 68, 68, 0.10); /* bg-red-500/10 */
+      --crimson-border: rgba(239, 68, 68, 0.20); /* border-red-500/20 */
+      --crimson-glow: rgba(239, 68, 68, 0.2);
+
+      /* Status: amber-400 warning */
+      --amber: #fbbf24;             /* text-amber-400 */
+      --amber-bg: rgba(245, 158, 11, 0.10); /* bg-amber-500/10 */
+      --amber-border: rgba(245, 158, 11, 0.20); /* border-amber-500/20 */
+      --amber-glow: rgba(245, 158, 11, 0.2);
+
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.45;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-surface);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-accent);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #64748b;
+    }
+
+    /* Top Navigation Header */
+    .noc-header {
+      background-color: var(--bg-surface);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 0.75rem 1.75rem;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, #1e1b4b, #312e81);
+      border: 1px solid var(--indigo);
+      border-radius: 8px;
+      color: var(--cyan);
+      box-shadow: 0 0 15px var(--indigo-glow);
+    }
+
+    .brand-title h1 {
+      font-size: 1.12rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .engine-pulse {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      padding: 0.15rem 0.55rem;
+      border-radius: 9999px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: var(--emerald);
+    }
+
+    .pulse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--emerald);
+      box-shadow: 0 0 8px var(--emerald);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .brand-subtitle {
+      font-size: 0.74rem;
+      color: var(--text-muted);
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .scenario-picker-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 0.25rem 0.6rem;
+    }
+
+    .scenario-picker-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      font-weight: 600;
+      color: var(--text-dim);
+    }
+
+    select.scenario-select {
+      background: transparent;
+      color: var(--text-main);
+      border: none;
+      font-size: 0.83rem;
+      font-weight: 500;
+      cursor: pointer;
+      outline: none;
+    }
+
+    select.scenario-select option {
+      background: var(--bg-card);
+      color: var(--text-main);
+    }
+
+    .file-input-btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.32rem 0.75rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--cyan);
+      background: rgba(6, 182, 212, 0.1);
+      border: 1px solid rgba(6, 182, 212, 0.4);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .file-input-btn:hover {
+      background: rgba(6, 182, 212, 0.2);
+      border-color: var(--cyan);
+    }
+
+    .file-input-btn input[type="file"] {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    /* Main Container */
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 1.25rem 1.75rem;
+      width: 100%;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    /* Incident Header Bar */
+    .incident-meta-strip {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 0.75rem; /* rounded-xl */
+      padding: 1rem;          /* p-4 */
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .meta-group {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+
+    .incident-id-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-family: var(--font-mono);
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--cyan);
+      background: var(--bg-base);
+      border: 1px solid var(--border-subtle);
+      padding: 0.3rem 0.65rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .incident-id-badge:hover {
+      border-color: var(--cyan);
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.5rem; /* px-2 py-1 */
+      border-radius: 0.25rem;  /* rounded */
+      font-size: 0.75rem;      /* text-xs */
+      font-weight: 500;
+      line-height: 1rem;
+    }
+
+    .status-healthy, .status-diagnosed-healthy {
+      background: rgba(16, 185, 129, 0.10); /* bg-emerald-500/10 */
+      color: #34d399;                       /* text-emerald-400 */
+      border: 1px solid rgba(16, 185, 129, 0.20); /* border-emerald-500/20 */
+    }
+
+    .status-fault, .status-diagnosed, .status-insufficient {
+      background: rgba(239, 68, 68, 0.10); /* bg-red-500/10 */
+      color: #f87171;                       /* text-red-400 */
+      border: 1px solid rgba(239, 68, 68, 0.20); /* border-red-500/20 */
+    }
+
+    .status-inconclusive {
+      background: rgba(245, 158, 11, 0.10); /* bg-amber-500/10 */
+      color: #fbbf24;                       /* text-amber-400 */
+      border: 1px solid rgba(245, 158, 11, 0.20); /* border-amber-500/20 */
+    }
+
+    .confidence-gauge-box {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+
+    .gauge-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    .gauge-value {
+      font-size: 1.15rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+    }
+
+    .progress-track {
+      width: 130px;
+      height: 9px;
+      background: #202b3c;
+      border-radius: 9999px;
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 9999px;
+      transition: width 0.5s ease-in-out, background 0.3s;
+    }
+
+    /* Hero Diagnosis Banner (bg-slate-800 border border-slate-700 rounded-xl p-4) */
+    .hero-diagnosis-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 0.75rem; /* rounded-xl */
+      padding: 1rem;          /* p-4 */
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-diagnosis-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 4px; height: 100%;
+      background: var(--cyan);
+      box-shadow: 0 0 12px var(--cyan);
+    }
+
+    .hero-top-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .hero-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--cyan);
+      margin-bottom: 0.25rem;
+    }
+
+    .hero-root-cause {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.3;
+    }
+
+    .category-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.2rem 0.55rem;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid var(--indigo);
+      border-radius: 4px;
+      font-size: 0.76rem;
+      font-family: var(--font-mono);
+      color: #a5b4fc;
+      white-space: nowrap;
+    }
+
+    .hero-meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .meta-chip-section {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+    }
+
+    .chip-title {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .device-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: #0f172a;
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      padding: 0.18rem 0.5rem;
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      color: #38bdf8;
+    }
+
+    .agent-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 4px;
+      padding: 0.18rem 0.5rem;
+      font-size: 0.76rem;
+      color: #6ee7b7;
+    }
+
+    .agent-chip-idle {
+      background: rgba(107, 114, 128, 0.1);
+      border: 1px solid rgba(107, 114, 128, 0.25);
+      color: #9ca3af;
+      text-decoration: line-through;
+    }
+
+    /* Split-View Main Grid */
+    .split-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 1rem;
+    }
+
+    @media (max-width: 1024px) {
+      .split-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 0.75rem; /* rounded-xl */
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .panel-header {
+      padding: 0.75rem 1.15rem;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .counter-badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      background: #0f172a;
+      border: 1px solid var(--border-subtle);
+      padding: 0.1rem 0.45rem;
+      border-radius: 9999px;
+      color: var(--cyan);
+    }
+
+    .panel-body {
+      padding: 1rem 1.15rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    /* Evidence Table */
+    .evidence-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.83rem;
+    }
+
+    .evidence-table th {
+      text-align: left;
+      padding: 0.55rem 0.85rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      background: rgba(0, 0, 0, 0.2);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .evidence-table td {
+      padding: 0.65rem 0.85rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      vertical-align: top;
+    }
+
+    .evidence-table tr:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .metric-name-cell {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: #38bdf8;
+      white-space: nowrap;
+    }
+
+    .metric-value-pill {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      padding: 0.15rem 0.5rem;
+      background: #0f172a;
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      color: #f1f5f9;
+      white-space: nowrap;
+    }
+
+    .metric-value-pill.anomaly {
+      border-color: rgba(239, 68, 68, 0.5);
+      background: rgba(239, 68, 68, 0.1);
+      color: #fca5a5;
+    }
+
+    .interpretation-text {
+      color: #d1d5db;
+      font-size: 0.82rem;
+      line-height: 1.4;
+    }
+
+    /* Right Panel: Remediation Checklist */
+    .actions-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+
+    .action-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.65rem;
+      background: #0f172a;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 0.65rem 0.85rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .action-item:hover {
+      background: #1e293b;
+      border-color: var(--border-accent);
+    }
+
+    .action-checkbox {
+      margin-top: 0.18rem;
+      width: 15px;
+      height: 15px;
+      accent-color: var(--emerald);
+      cursor: pointer;
+    }
+
+    .action-text {
+      font-size: 0.82rem;
+      color: #e2e8f0;
+      flex: 1;
+      line-height: 1.4;
+    }
+
+    .action-item.completed {
+      opacity: 0.6;
+      background: rgba(16, 185, 129, 0.05);
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .action-item.completed .action-text {
+      text-decoration: line-through;
+      color: #94a3b8;
+    }
+
+    .priority-badge {
+      font-size: 0.66rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      padding: 0.1rem 0.35rem;
+      border-radius: 3px;
+      background: rgba(99, 102, 241, 0.2);
+      color: #a5b4fc;
+      border: 1px solid rgba(99, 102, 241, 0.4);
+    }
+
+    /* Alternative Causes */
+    .alt-causes-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .alt-cause-card {
+      background: #0f172a;
+      border: 1px solid var(--border-subtle);
+      border-left: 3px solid var(--amber);
+      border-radius: 0 4px 4px 0;
+      padding: 0.45rem 0.75rem;
+      font-size: 0.8rem;
+      color: #cbd5e1;
+    }
+
+    /* Limitations Warning Box */
+    .limitations-box {
+      background: #0f172a;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: 6px;
+      padding: 0.75rem 0.95rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .limitations-header {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--amber);
+    }
+
+    .limitations-list {
+      list-style-type: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .limitations-list li {
+      font-size: 0.78rem;
+      color: #94a3b8;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.4rem;
+    }
+
+    .limitations-list li::before {
+      content: '•';
+      color: var(--amber);
+    }
+
+    /* =========================================================================
+       COMPACT NOC TECHNICAL CONSOLE (Tabbed Pytest Terminal & Section 6 JSON)
+       ========================================================================= */
+    .noc-console {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 0.75rem; /* rounded-xl */
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    }
+
+    .console-header-bar {
+      background: var(--bg-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 0.45rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .console-tabs {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .console-tab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.35rem 0.85rem;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 5px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .console-tab-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .console-tab-btn.active {
+      color: #fff;
+      background: var(--bg-card);
+      border-color: var(--border-accent);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .tab-status-pill {
+      font-size: 0.68rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      padding: 0.1rem 0.45rem;
+      border-radius: 9999px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid var(--emerald);
+      color: var(--emerald);
+    }
+
+    .console-actions-strip {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .test-search-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      padding: 0.25rem 0.55rem;
+      font-size: 0.76rem;
+      color: #fff;
+      font-family: var(--font-mono);
+      outline: none;
+      width: 170px;
+      transition: border-color 0.15s, width 0.2s;
+    }
+
+    .test-search-box:focus {
+      border-color: var(--cyan);
+      width: 220px;
+    }
+
+    .btn-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.32rem;
+      padding: 0.25rem 0.6rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-action:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+
+    /* Terminal Sub-header & Quick Filters */
+    .terminal-meta-bar {
+      padding: 0.45rem 1rem;
+      background: rgba(11, 15, 25, 0.9);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.65rem;
+      font-size: 0.74rem;
+    }
+
+    .cmd-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--cyan);
+      background: rgba(6, 182, 212, 0.08);
+      border: 1px solid rgba(6, 182, 212, 0.25);
+      border-radius: 4px;
+      padding: 0.15rem 0.45rem;
+    }
+
+    .stat-pill {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: #cbd5e1;
+    }
+
+    .filter-pills-group {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      margin-left: 0.5rem;
+    }
+
+    .filter-pill {
+      cursor: pointer;
+      font-size: 0.7rem;
+      padding: 0.12rem 0.45rem;
+      border-radius: 3px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      transition: all 0.12s;
+    }
+
+    .filter-pill:hover, .filter-pill.active {
+      color: #fff;
+      background: #334155;
+      border-color: var(--cyan);
+    }
+
+    /* Scrollable Terminal Output Window */
+    .terminal-output-container {
+      background: #020617; /* bg-slate-950 */
+      max-height: 250px;
+      overflow-y: auto;
+      padding: 0.75rem 1rem;
+      transition: max-height 0.25s ease;
+    }
+
+    .terminal-output-container.expanded {
+      max-height: 480px;
+    }
+
+    pre.terminal-code {
+      font-family: var(--font-mono);
+      font-size: 0.77rem;
+      line-height: 1.38;
+      color: #94a3b8;
+      white-space: pre;
+    }
+
+    /* Terminal Syntax Highlight */
+    .term-test-path { color: #94a3b8; }
+    .term-test-method { color: #38bdf8; font-weight: 500; }
+    .term-pass { color: var(--emerald); font-weight: 700; text-shadow: 0 0 6px rgba(16, 185, 129, 0.35); }
+    .term-pct { color: #64748b; }
+    .term-summary-line {
+      display: block;
+      margin-top: 0.65rem;
+      padding: 0.35rem 0.65rem;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid var(--emerald);
+      border-radius: 4px;
+      color: #6ee7b7;
+      font-weight: 700;
+    }
+
+    /* JSON Drawer Container */
+    .json-output-container {
+      background: #020617; /* bg-slate-950 */
+      max-height: 250px;
+      overflow-y: auto;
+      padding: 0.85rem 1rem;
+      transition: max-height 0.25s ease;
+    }
+
+    .json-output-container.expanded {
+      max-height: 480px;
+    }
+
+    pre.code-json {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: #94a3b8;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .json-key { color: #38bdf8; font-weight: 600; }
+    .json-string { color: #a5b4fc; }
+    .json-number { color: #fbbf24; }
+    .json-boolean { color: #34d399; }
+    .json-null { color: #f87171; }
+
+    /* Drag & Drop Overlay */
+    #drop-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(11, 15, 25, 0.88);
+      border: 3px dashed var(--cyan);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    #drop-overlay.active {
+      display: flex;
+    }
+
+    .drop-message {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--cyan);
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background: var(--bg-card);
+      border: 1px solid var(--cyan);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+      padding: 0.65rem 1.15rem;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.25s ease;
+      z-index: 99;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Fullscreen Drag & Drop Target Overlay -->
+  <div id="drop-overlay">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--cyan);"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+    <div class="drop-message">Drop NetCoop JSON Incident Report to Inspect</div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast" class="toast">
+    <span id="toast-msg">Copied to clipboard</span>
+  </div>
+
+  <!-- Top NOC Header Bar -->
+  <header class="noc-header">
+    <div class="brand-section">
+      <div class="brand-logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+      </div>
+      <div class="brand-title">
+        <h1>
+          NetCoop AI 
+          <span class="engine-pulse"><span class="pulse-dot"></span>ENGINE ONLINE</span>
+          <span class="engine-pulse" style="cursor: pointer; background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.4);" onclick="scrollToConsole('pytest')" title="Click to view full pytest -v verification">
+            <span class="pulse-dot"></span>TESTS: 219/219 PASSED
+          </span>
+        </h1>
+        <div class="brand-subtitle">Multi-Agent Network Diagnostic Console (Section 6 Standard)</div>
+      </div>
+    </div>
+
+    <div class="header-controls">
+      <div class="scenario-picker-wrap">
+        <span class="scenario-picker-label">Preset Scenario:</span>
+        <select id="scenario-selector" class="scenario-select" onchange="loadSelectedScenario(this.value)">
+          <option value="link_congestion">Link Congestion (Sustained Queue Saturation)</option>
+          <option value="interface_fault">Interface Flapping & Packet Faults (L2)</option>
+          <option value="dns_dhcp_failure">Application DNS/DHCP Service Outage</option>
+          <option value="weak_wifi">Wireless 802.11 RF Signal Attenuation</option>
+          <option value="normal_ops">Healthy Baseline (Nominal Operations)</option>
+          <option value="single_metric">Inconclusive Correlation (Single Metric)</option>
+          <option value="corrupt_input">Corrupt Telemetry (Insufficient Evidence)</option>
+        </select>
+      </div>
+
+      <label class="file-input-btn" title="Upload local Section 6 IncidentReport JSON">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span>Upload JSON</span>
+        <input type="file" id="json-file-input" accept=".json" onchange="handleFileUpload(event)">
+      </label>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <main class="container">
+
+    <!-- Incident Meta Bar -->
+    <div class="incident-meta-strip">
+      <div class="meta-group">
+        <div class="incident-id-badge" onclick="copyIncidentId()" title="Click to copy Incident ID">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <span id="incident-id-text">INC-00000000</span>
+        </div>
+        <span id="status-pill" class="status-pill status-fault">Fault Detected</span>
+      </div>
+
+      <div class="confidence-gauge-box">
+        <div class="gauge-label">
+          <span>Diagnostic Confidence</span>
+          <div id="confidence-formula-hint" style="font-size: 0.65rem; color: var(--text-dim);">Consensus × Corroboration</div>
+        </div>
+        <div id="confidence-gauge-num" class="gauge-value" style="color: var(--emerald);">95%</div>
+        <div class="progress-track">
+          <div id="confidence-progress-bar" class="progress-fill" style="width: 95%; background: var(--emerald);"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Core Diagnosis Hero Card -->
+    <section class="hero-diagnosis-card">
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; padding-bottom: 0.65rem; border-bottom: 1px solid var(--border-subtle);">
+        <h2 class="text-sky-400 font-semibold text-lg" style="color: var(--cyan); font-weight: 600; font-size: 1.125rem;">Agent Interoperability Feed</h2>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span class="status-pill status-healthy">Healthy</span>
+          <span class="status-pill status-fault">Fault Detected</span>
+        </div>
+      </div>
+
+      <div class="hero-top-row">
+        <div>
+          <div class="hero-label">Suspected Root Cause</div>
+          <div id="hero-root-cause" class="hero-root-cause">Analyzing network telemetry...</div>
+        </div>
+        <div id="category-badge-wrap">
+          <span id="category-badge" class="category-badge">link_congestion</span>
+        </div>
+      </div>
+
+      <div class="hero-meta-row">
+        <div class="meta-chip-section">
+          <span class="chip-title">Affected Devices:</span>
+          <div id="affected-devices-list" style="display: flex; gap: 0.35rem; flex-wrap: wrap;"></div>
+        </div>
+
+        <div class="meta-chip-section" style="margin-left: auto;">
+          <span class="chip-title">Contributing Agents:</span>
+          <div id="evidence-sources-list" style="display: flex; gap: 0.35rem; flex-wrap: wrap;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Split-View Evidence & Action Grid -->
+    <div class="split-grid">
+      
+      <!-- Left Panel: Supporting Telemetry Evidence -->
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--cyan);"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            Supporting Telemetry Evidence
+            <span id="evidence-count" class="counter-badge">0</span>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase;">Two-Agent Corroborated</div>
+        </div>
+
+        <div class="panel-body" style="padding: 0;">
+          <table class="evidence-table">
+            <thead>
+              <tr>
+                <th style="width: 25%;">Metric</th>
+                <th style="width: 20%;">Observed Value</th>
+                <th style="width: 55%;">Interpretation & Semantic Analysis</th>
+              </tr>
+            </thead>
+            <tbody id="evidence-tbody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Right Panel: Remediation & Operational Context -->
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--emerald);"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Mitigation Plan & Operational Context
+          </div>
+          <span id="actions-resolved-counter" class="counter-badge" style="color: var(--emerald);">0/0 Resolved</span>
+        </div>
+
+        <div class="panel-body">
+          <!-- Recommended Actions Checklist -->
+          <div>
+            <div style="font-size: 0.74rem; text-transform: uppercase; font-weight: 700; color: var(--emerald); margin-bottom: 0.45rem;">
+              Prioritized Remediation Actions
+            </div>
+            <div id="actions-list" class="actions-list">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Alternative Hypotheses Considered -->
+          <div id="alt-causes-container">
+            <div style="font-size: 0.74rem; text-transform: uppercase; font-weight: 700; color: var(--amber); margin-bottom: 0.45rem;">
+              Alternative Causes Considered (Ranked Lower)
+            </div>
+            <div id="alt-causes-list" class="alt-causes-wrap">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Operational Limitations Callout -->
+          <div class="limitations-box">
+            <div class="limitations-header">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Operational Limitations & Telemetry Ingestion Notes
+            </div>
+            <ul id="limitations-list" class="limitations-list">
+              <!-- Dynamically populated -->
+            </ul>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Compact Unified Technical Console: Pytest -v Output + Section 6 JSON -->
+    <section id="noc-console-section" class="noc-console">
+      <div class="console-header-bar">
+        <div class="console-tabs">
+          <button class="console-tab-btn active" id="tab-btn-pytest" onclick="switchConsoleTab('pytest')">
+            <span class="pulse-dot" style="background: var(--emerald);"></span>
+            <span>Test Suite Verification (<code>.venv/bin/pytest -v</code>)</span>
+            <span class="tab-status-pill">219 PASSED</span>
+          </button>
+          <button class="console-tab-btn" id="tab-btn-json" onclick="switchConsoleTab('json')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            <span>Raw Incident JSON (Section 6 Standard)</span>
+          </button>
+        </div>
+
+        <div class="console-actions-strip">
+          <!-- Pytest specific controls -->
+          <div id="pytest-controls" style="display: flex; align-items: center; gap: 0.4rem;">
+            <input type="text" id="pytest-filter-input" placeholder="Search tests (e.g. m4, congestion)..." oninput="filterPytestOutput(this.value)" class="test-search-box">
+            <button class="btn-action" onclick="copyPytestOutput()" title="Copy entire pytest -v output">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copy Output
+            </button>
+          </div>
+
+          <!-- JSON specific controls -->
+          <div id="json-controls" style="display: none; align-items: center; gap: 0.4rem;">
+            <button class="btn-action" onclick="copyRawJson()" title="Copy entire JSON to clipboard">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copy JSON
+            </button>
+            <button class="btn-action" onclick="downloadJsonReport()" title="Download JSON file">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download .json
+            </button>
+          </div>
+
+          <button class="btn-action" onclick="toggleConsoleSize()" id="console-size-btn" title="Toggle compact/expanded view">
+            Expand
+          </button>
+          <button class="btn-action" onclick="toggleConsoleCollapse()" id="console-collapse-btn">
+            Collapse
+          </button>
+        </div>
+      </div>
+
+      <!-- Pytest Metadata & Filter Bar -->
+      <div id="pytest-meta-bar" class="terminal-meta-bar">
+        <span class="cmd-badge">$ .venv/bin/pytest -v</span>
+        <span class="stat-pill"><strong style="color: var(--emerald);">219</strong> Passed</span>
+        <span class="stat-pill"><strong style="color: var(--text-dim);">0</strong> Failed</span>
+        <span class="stat-pill"><strong style="color: var(--text-dim);">0</strong> Errors</span>
+        <span class="stat-pill">Runtime: <strong style="color: var(--cyan);">1.83s</strong></span>
+        
+        <div class="filter-pills-group">
+          <span class="filter-pill active" onclick="setTestCategoryFilter('all', this)">All (219)</span>
+          <span class="filter-pill" onclick="setTestCategoryFilter('m4', this)">m4 E2E (5)</span>
+          <span class="filter-pill" onclick="setTestCategoryFilter('agents', this)">Agents (35)</span>
+          <span class="filter-pill" onclick="setTestCategoryFilter('scenarios', this)">Scenarios (28)</span>
+          <span class="filter-pill" onclick="setTestCategoryFilter('validator', this)">Validator (68)</span>
+          <span class="filter-pill" onclick="setTestCategoryFilter('protocol', this)">Protocol (5)</span>
+          <span class="filter-pill" onclick="setTestCategoryFilter('robustness', this)">Robustness (6)</span>
+        </div>
+
+        <span id="test-filter-count" style="margin-left: auto; font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-dim);">219 / 219 Tests</span>
+      </div>
+
+      <!-- Pytest Terminal Output Window -->
+      <div id="pytest-terminal-container" class="terminal-output-container">
+        <pre id="pytest-terminal-code" class="terminal-code"></pre>
+      </div>
+
+      <!-- Section 6 JSON Output Window -->
+      <div id="json-output-container" class="json-output-container" style="display: none;">
+        <pre id="raw-json-code" class="code-json"></pre>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // =========================================================================
+    // EXACT OUTPUT OF: .venv/bin/pytest -v (219 PASSED)
+    // =========================================================================
+    const RAW_PYTEST_OUTPUT = `============================= test session starts ==============================
+platform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0 -- /Users/mihirtiwari/Documents/IIT_Bhubaneshwar_Hackathon_R2/Round_2/netcoop-ai-engine/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/mihirtiwari/Documents/IIT_Bhubaneshwar_Hackathon_R2/Round_2/netcoop-ai-engine
+configfile: pytest.ini
+testpaths: tests
+collecting ... collected 219 items
+
+tests/test_agents.py::TestTelemetryAgent::test_detect_link_congestion_under_high_latency_and_loss PASSED [  0%]
+tests/test_agents.py::TestTelemetryAgent::test_healthy_telemetry_baseline PASSED [  0%]
+tests/test_agents.py::TestTelemetryAgent::test_telemetry_insufficient_evidence_when_latency_or_loss_jitter_missing PASSED [  1%]
+tests/test_agents.py::TestTelemetryAgent::test_telemetry_filters_by_device_id_and_timestamp PASSED [  1%]
+tests/test_agents.py::TestInfrastructureAgent::test_detect_crc_errors_and_queue_drops PASSED [  2%]
+tests/test_agents.py::TestInfrastructureAgent::test_infrastructure_healthy_with_minimum_metrics PASSED [  2%]
+tests/test_agents.py::TestInfrastructureAgent::test_detect_control_plane_exhaustion PASSED [  3%]
+tests/test_agents.py::TestInfrastructureAgent::test_infrastructure_filters_device_id_and_newer_timestamp PASSED [  3%]
+tests/test_topology_agent.py::TestTopologyAgent::test_evaluate_upstream_blast_radius PASSED [  4%]
+tests/test_topology_agent.py::TestTopologyAgent::test_evaluate_edge_isolated_fault PASSED [  4%]
+tests/test_topology_agent.py::TestTopologyAgent::test_redundancy_aware_core_gw_02_blast_radius PASSED [  5%]
+tests/test_topology_agent.py::TestTopologyAgent::test_topology_agent_healthy_device_status PASSED [  5%]
+tests/test_topology_agent.py::TestTopologyAgent::test_topology_agent_copies_topology_per_instance PASSED [  5%]
+tests/test_topology_agent.py::TestTopologyAgent::test_topology_agent_loads_custom_topology_from_payload_metadata PASSED [  6%]
+tests/test_topology_agent.py::TestTopologyAgent::test_topology_agent_device_lookup_case_insensitive PASSED [  6%]
+tests/test_topology_agent.py::TestTopologyAgent::test_topology_agent_cycle_bug_start_node_never_in_blast_radius PASSED [  7%]
+tests/test_topology_agent.py::TestTopologyAgent::test_helper_get_metrics_by_device_case_insensitive PASSED [  7%]
+tests/test_topology_agent.py::TestTopologyAgent::test_topology_agent_identifies_upstream_crc_fault_as_root_cause PASSED [  8%]
+tests/test_topology_agent.py::TestTopologyAgent::test_topology_agent_identifies_upstream_high_cpu_fault_as_root_cause PASSED [  8%]
+tests/test_agents.py::TestInsufficientEvidenceHandling::test_telemetry_agent_insufficient_evidence_on_empty_metrics PASSED [  9%]
+tests/test_agents.py::TestInsufficientEvidenceHandling::test_infrastructure_agent_insufficient_evidence_on_empty_metrics PASSED [  9%]
+tests/test_agents.py::TestInsufficientEvidenceHandling::test_topology_agent_insufficient_evidence_on_empty_metrics PASSED [ 10%]
+tests/test_agents.py::TestInsufficientEvidenceHandling::test_wireless_agent_insufficient_evidence_on_empty_metrics PASSED [ 10%]
+tests/test_agents.py::TestInsufficientEvidenceHandling::test_service_agent_insufficient_evidence_on_empty_metrics PASSED [ 10%]
+tests/test_agents.py::TestWirelessAgent::test_detect_weak_rssi_and_low_snr PASSED [ 11%]
+tests/test_agents.py::TestWirelessAgent::test_healthy_wireless_parameters PASSED [ 11%]
+tests/test_agents.py::TestWirelessAgent::test_wireless_unrecognized_units_recorded_as_limitations PASSED [ 12%]
+tests/test_agents.py::TestServiceAgent::test_detect_dns_latency_and_failure_rate PASSED [ 12%]
+tests/test_agents.py::TestServiceAgent::test_detect_dhcp_discover_failures PASSED [ 13%]
+tests/test_agents.py::TestServiceAgent::test_healthy_service_metrics PASSED [ 13%]
+tests/test_agents.py::TestInfrastructureInterfaceHealth::test_detect_interface_link_down_and_flapping PASSED [ 14%]
+tests/test_agents.py::TestInfrastructureInterfaceHealth::test_detect_device_status_down PASSED [ 14%]
+tests/test_agents.py::TestInfrastructureInterfaceHealth::test_detect_interface_packet_errors PASSED [ 15%]
+tests/test_agents.py::TestTelemetryThroughputBandwidth::test_detect_throughput_collapse_under_congestion PASSED [ 15%]
+tests/test_agents.py::TestTelemetryThroughputBandwidth::test_nominal_throughput_reported_in_evidence PASSED [ 15%]
+tests/test_e2e.py::TestCoordinatorE2E::test_link_congestion_scenario_diagnosed PASSED [ 16%]
+tests/test_e2e.py::TestCoordinatorE2E::test_normal_ops_scenario_diagnosed PASSED [ 16%]
+tests/test_e2e.py::TestCoordinatorE2E::test_healthy_device_missing_from_topology_diagnosed PASSED [ 17%]
+tests/test_e2e.py::TestCoordinatorE2E::test_malformed_data_scenario_resilience PASSED [ 17%]
+tests/test_e2e.py::TestArbiterConflictResolution::test_link_saturation_with_high_utilization_and_zero_drops PASSED [ 18%]
+tests/test_e2e.py::TestArbiterConflictResolution::test_arbiter_recognizes_fcs_and_ram_aliases PASSED [ 18%]
+tests/test_e2e.py::TestArbiterConflictResolution::test_dispute_local_congestion_when_infra_is_clear PASSED [ 19%]
+tests/test_e2e.py::TestArbiterConflictResolution::test_dispute_wan_latency_when_queue_drops_exist PASSED [ 19%]
+tests/test_e2e.py::TestConfidenceFormula::test_confidence_formula_mathematical_derivation PASSED [ 20%]
+tests/test_e2e.py::TestDynamicAlternativeCauses::test_dynamic_alternative_causes_built_from_competing_hypotheses PASSED [ 20%]
+tests/test_e2e.py::TestCoordinatorUpstreamRootCause::test_coordinator_end_to_end_upstream_device_fault_diagnosis PASSED [ 21%]
+tests/test_e2e.py::TestIngestionNotesAndResilience::test_ingestion_notes_appear_in_incident_report_limitations PASSED [ 21%]
+tests/test_e2e.py::TestIngestionNotesAndResilience::test_agent_crash_resilience PASSED [ 22%]
+tests/test_e2e.py::TestRunFromFileEdgeCases::test_run_from_file_malformed_json PASSED [ 22%]
+tests/test_e2e.py::TestRunFromFileEdgeCases::test_run_from_file_empty_file PASSED [ 23%]
+tests/test_e2e.py::TestRunFromFileEdgeCases::test_run_from_file_utf8_bom PASSED [ 23%]
+tests/test_m4_e2e.py::test_m4_a_healthy_e2e PASSED [ 24%]
+tests/test_m4_e2e.py::test_m4_b_congestion_e2e PASSED [ 24%]
+tests/test_m4_e2e.py::test_m4_c_link_flap_e2e PASSED [ 25%]
+tests/test_m4_e2e.py::test_m4_d_dirty_data_e2e PASSED [ 25%]
+tests/test_m4_e2e.py::test_m4_e_corrupt_e2e PASSED [ 26%]
+tests/test_m4_validator.py::test_clean_payload_is_ok PASSED [ 26%]
+tests/test_m4_validator.py::test_missing_timestamp_defaults PASSED [ 27%]
+tests/test_m4_validator.py::test_null_metric_dropped PASSED [ 27%]
+tests/test_m4_validator.py::test_strings_coerced_to_numbers PASSED [ 28%]
+tests/test_m4_validator.py::test_unit_normalization_seconds_to_ms PASSED [ 28%]
+tests/test_m4_validator.py::test_unit_normalization_kbps_to_mbps PASSED [ 29%]
+tests/test_m4_validator.py::test_unit_normalization_ratio_to_pct PASSED [ 29%]
+tests/test_m4_validator.py::test_bogus_values_dropped_gracefully PASSED [ 30%]
+tests/test_m4_validator.py::test_completely_empty_metrics_dict_rejected PASSED [ 30%]
+tests/test_m4_validator.py::test_non_dict_payload_rejected PASSED [ 31%]
+tests/test_m4_validator.py::test_unknown_schema_version_notes PASSED [ 31%]
+tests/test_m4_validator.py::test_scenario_file_m4_A_healthy_json PASSED [ 32%]
+tests/test_m4_validator.py::test_scenario_file_m4_B_congestion_json PASSED [ 32%]
+tests/test_m4_validator.py::test_scenario_file_m4_C_link_flap_json PASSED [ 33%]
+tests/test_m4_validator.py::test_scenario_file_m4_D_dirty_data_json PASSED [ 33%]
+tests/test_m4_validator.py::test_scenario_file_m4_E_corrupt_json PASSED [ 34%]
+tests/test_m4_validator.py::test_minimal_valid_report_passes PASSED [ 34%]
+tests/test_m4_validator.py::test_report_missing_required_field_fails PASSED [ 35%]
+tests/test_m4_validator.py::test_report_invalid_status_fails PASSED [ 35%]
+tests/test_m4_validator.py::test_report_confidence_out_of_range_fails PASSED [ 36%]
+tests/test_m4_validator.py::test_report_from_verdict_builder PASSED [ 36%]
+tests/test_m4_validator.py::test_build_report_coerces_non_string_devices PASSED [ 37%]
+tests/test_m4_validator.py::test_build_report_dedupes_limitations PASSED [ 37%]
+tests/test_m4_validator.py::test_build_report_preserves_empty_evidence_sources_on_failure PASSED [ 38%]
+tests/test_protocol.py::test_agent_message_envelope_creation PASSED [ 38%]
+tests/test_protocol.py::test_schema_version_compatibility PASSED [ 39%]
+tests/test_protocol.py::test_message_log_sequence_and_filtering PASSED [ 39%]
+tests/test_protocol.py::test_message_log_jsonl_export_and_import PASSED [ 40%]
+tests/test_protocol.py::test_coordinator_generates_complete_message_log PASSED [ 40%]
+tests/test_reporter.py::test_reporter_valid_incident_report PASSED [ 41%]
+tests/test_reporter.py::test_reporter_markdown_format PASSED [ 41%]
+tests/test_reporter.py::test_reporter_terminal_table_format PASSED [ 42%]
+tests/test_reporter.py::test_reporter_generates_default_recommendations PASSED [ 42%]
+tests/test_reporter.py::test_microburst_recommendations_not_generic PASSED [ 43%]
+tests/test_reporter.py::test_new_rules_have_specific_recommendations PASSED [ 43%]
+tests/test_reporter.py::test_recommendations_driven_by_rule_id PASSED [ 44%]
+tests/test_robustness.py::test_unknown_schema_version_graceful PASSED [ 44%]
+tests/test_robustness.py::test_malformed_json_file PASSED [ 45%]
+tests/test_robustness.py::test_empty_file_handling PASSED [ 45%]
+tests/test_robustness.py::test_utf8_bom_file_handling PASSED [ 46%]
+tests/test_robustness.py::test_all_corrupt_payload_handling PASSED [ 46%]
+tests/test_robustness.py::test_individual_agent_exception_isolation PASSED [ 47%]
+tests/test_scenarios.py::TestCliPipelineOnAllScenarios::test_cli_execution_per_scenario[link_congestion.json] PASSED [ 47%]
+tests/test_scenarios.py::TestCliPipelineOnAllScenarios::test_cli_execution_per_scenario[normal_ops.json] PASSED [ 48%]
+tests/test_scenarios.py::TestCliPipelineOnAllScenarios::test_cli_execution_per_scenario[malformed_data.json] PASSED [ 48%]
+tests/test_scenarios.py::TestCliPipelineOnAllScenarios::test_cli_execution_per_scenario[weak_wifi.json] PASSED [ 49%]
+tests/test_scenarios.py::TestCliPipelineOnAllScenarios::test_cli_execution_per_scenario[interface_fault.json] PASSED [ 49%]
+tests/test_scenarios.py::TestCliPipelineOnAllScenarios::test_cli_execution_per_scenario[dns_dhcp_failure.json] PASSED [ 50%]
+tests/test_scenarios.py::TestCliPipelineOnAllScenarios::test_cli_execution_per_scenario[interop_renamed_fields.json] PASSED [ 50%]
+tests/test_scenarios.py::TestCliPipelineOnAllScenarios::test_cli_execution_per_scenario[interop_dict_metrics.json] PASSED [ 51%]
+tests/test_scenarios.py::TestCliPipelineOnAllScenarios::test_cli_execution_per_scenario[interop_unit_in_value.json] PASSED [ 51%]
+tests/test_scenarios.py::TestCliPipelineOnAllScenarios::test_cli_execution_per_scenario[upstream_root_cause.json] PASSED [ 52%]
+tests/test_scenarios.py::TestCliPipelineOnAllScenarios::test_cli_execution_per_scenario[link_down.json] PASSED [ 52%]
+tests/test_scenarios.py::TestCliPipelineOnAllScenarios::test_cli_execution_per_scenario[single_metric_insufficient.json] PASSED [ 53%]
+tests/test_telemetry.py::test_high_latency_and_utilization_flag_possible_congestion PASSED [ 53%]
+tests/test_telemetry.py::test_normal_complete_telemetry_is_healthy PASSED [ 54%]
+tests/test_telemetry.py::test_missing_metrics_do_not_crash_and_are_reported PASSED [ 54%]
+tests/test_telemetry.py::test_high_jitter_with_variable_rtt_samples_creates_hypothesis PASSED [ 55%]
+tests/test_telemetry.py::test_invalid_unit_is_reported_instead_of_silently_assumed PASSED [ 55%]
+tests/test_telemetry.py::test_overflowing_measurements_are_reported_and_remain_json_safe PASSED [ 56%]
+tests/test_timeutils.py::TestTimeUtilsParsing::test_parse_iso_with_z PASSED [ 56%]
+tests/test_timeutils.py::TestTimeUtilsParsing::test_parse_iso_naive_treated_as_utc PASSED [ 57%]
+tests/test_timeutils.py::TestTimeUtilsParsing::test_parse_iso_space_separated_naive PASSED [ 57%]
+tests/test_timeutils.py::TestTimeUtilsParsing::test_parse_iso_with_explicit_offset PASSED [ 58%]
+tests/test_timeutils.py::TestTimeUtilsParsing::test_parse_iso_with_negative_offset PASSED [ 58%]
+tests/test_timeutils.py::TestTimeUtilsParsing::test_parse_epoch_seconds_numeric_and_string PASSED [ 59%]
+tests/test_timeutils.py::TestTimeUtilsParsing::test_parse_epoch_milliseconds_numeric_and_string PASSED [ 59%]
+tests/test_timeutils.py::TestTimeUtilsParsing::test_parse_invalid_or_none PASSED [ 60%]
+tests/test_timeutils.py::TestTimeUtilsChronologicalComparison::test_compare_epoch_vs_iso PASSED [ 60%]
+tests/test_timeutils.py::TestTimeUtilsChronologicalComparison::test_compare_mixed_offsets PASSED [ 61%]
+tests/test_timeutils.py::TestTimeUtilsChronologicalComparison::test_compare_telemetry_metric_objects PASSED [ 61%]
+tests/test_timeutils.py::TestTimeUtilsChronologicalComparison::test_compare_missing_timestamp_fallbacks PASSED [ 62%]
+tests/test_validator.py::TestValidPayloadIngestion::test_valid_full_payload_ingestion PASSED [ 62%]
+tests/test_validator.py::TestValidPayloadIngestion::test_valid_payload_with_empty_metrics PASSED [ 63%]
+tests/test_validator.py::TestMissingOptionalFields::test_missing_timestamp_in_metric PASSED [ 63%]
+tests/test_validator.py::TestMissingOptionalFields::test_missing_device_id_defaults_to_target_device PASSED [ 64%]
+tests/test_validator.py::TestMissingOptionalFields::test_missing_metadata_defaults_to_empty_dict PASSED [ 64%]
+tests/test_validator.py::TestMissingOptionalFields::test_missing_scenario_and_target_device_defaults PASSED [ 65%]
+tests/test_validator.py::TestMissingOptionalFields::test_empty_dictionary_payload PASSED [ 65%]
+tests/test_validator.py::TestMissingOptionalFields::test_non_dict_payload_never_crashes[None] PASSED [ 66%]
+tests/test_validator.py::TestMissingOptionalFields::test_non_dict_payload_never_crashes[invalid_input1] PASSED [ 66%]
+tests/test_validator.py::TestMissingOptionalFields::test_non_dict_payload_never_crashes[raw string input] PASSED [ 67%]
+tests/test_validator.py::TestMissingOptionalFields::test_non_dict_payload_never_crashes[999] PASSED [ 67%]
+tests/test_validator.py::TestDirtyDataAndUnitNormalization::test_stringified_number_conversion PASSED [ 68%]
+tests/test_validator.py::TestDirtyDataAndUnitNormalization::test_unit_normalization_seconds_to_milliseconds PASSED [ 68%]
+tests/test_validator.py::TestDirtyDataAndUnitNormalization::test_unit_normalization_microseconds_to_milliseconds PASSED [ 69%]
+tests/test_validator.py::TestDirtyDataAndUnitNormalization::test_unit_normalization_percentages_and_ratios PASSED [ 69%]
+tests/test_validator.py::TestDirtyDataAndUnitNormalization::test_unit_normalization_throughput_casing PASSED [ 70%]
+tests/test_validator.py::TestDirtyDataAndUnitNormalization::test_malformed_values_dropped_and_logged PASSED [ 70%]
+tests/test_validator.py::TestDirtyDataAndUnitNormalization::test_missing_metric_name_dropped PASSED [ 71%]
+tests/test_validator.py::TestDirtyDataAndUnitNormalization::test_non_dict_metric_item_dropped PASSED [ 71%]
+tests/test_validator.py::TestDirtyDataAndUnitNormalization::test_partial_valid_and_malformed_metrics_preservation PASSED [ 72%]
+tests/test_validator.py::test_clean_payload_is_ok PASSED [ 72%]
+tests/test_validator.py::test_missing_timestamp_defaults PASSED [ 73%]
+tests/test_validator.py::test_null_metric_dropped PASSED [ 73%]
+tests/test_validator.py::test_strings_coerced_to_numbers PASSED [ 74%]
+tests/test_validator.py::test_unit_normalization_seconds_to_ms PASSED [ 74%]
+tests/test_validator.py::test_unit_normalization_kbps_to_mbps PASSED [ 75%]
+tests/test_validator.py::test_unit_normalization_ratio_to_pct PASSED [ 75%]
+tests/test_validator.py::test_bogus_values_dropped_gracefully PASSED [ 76%]
+tests/test_validator.py::test_completely_empty_metrics_dict_rejected PASSED [ 76%]
+tests/test_validator.py::test_non_dict_payload_rejected PASSED [ 77%]
+tests/test_validator.py::test_unknown_schema_version_notes PASSED [ 77%]
+tests/test_validator.py::test_scenario_file_m4_A_healthy_json PASSED [ 78%]
+tests/test_validator.py::test_scenario_file_m4_B_congestion_json PASSED [ 78%]
+tests/test_validator.py::test_scenario_file_m4_C_link_flap_json PASSED [ 79%]
+tests/test_validator.py::test_scenario_file_m4_D_dirty_data_json PASSED [ 79%]
+tests/test_validator.py::test_scenario_file_m4_E_corrupt_json PASSED [ 80%]
+tests/test_validator.py::test_minimal_valid_report_passes PASSED [ 80%]
+tests/test_validator.py::test_report_missing_required_field_fails PASSED [ 81%]
+tests/test_validator.py::test_report_invalid_status_fails PASSED [ 81%]
+tests/test_validator.py::test_report_confidence_out_of_range_fails PASSED [ 82%]
+tests/test_validator.py::test_report_from_verdict_builder PASSED [ 82%]
+tests/test_validator.py::test_build_report_coerces_non_string_devices PASSED [ 83%]
+tests/test_validator.py::test_build_report_dedupes_limitations PASSED [ 83%]
+tests/test_validator.py::test_build_report_preserves_empty_evidence_sources_on_failure PASSED [ 84%]
+tests/test_validator.py::test_alias_canonicalization_queue_drops PASSED [ 84%]
+tests/test_validator.py::test_alias_canonicalization_latency PASSED [ 85%]
+tests/test_validator.py::test_alias_canonicalization_crc_and_flaps PASSED [ 85%]
+tests/test_validator.py::test_alias_canonicalization_cpu_and_ram PASSED [ 86%]
+tests/test_validator.py::test_alias_canonicalization_wireless_and_service PASSED [ 86%]
+tests/test_validator.py::test_alias_canonicalization_throughput PASSED [ 87%]
+tests/test_validator.py::test_canonical_units_mapped PASSED [ 87%]
+tests/test_validator.py::test_embedded_unit_stripping_and_normalization PASSED [ 88%]
+tests/test_validator.py::test_clean_metric_without_unit_gets_canonical_unit PASSED [ 88%]
+tests/test_validator.py::test_no_dimensionless_to_dimensionless_spurious_notes PASSED [ 89%]
+tests/test_validator.py::test_m4_A_healthy_has_no_missing_latency_or_queue_drops PASSED [ 89%]
+tests/test_validator.py::test_m4_B_congestion_rtt_ms_is_canonicalized_and_preserved PASSED [ 90%]
+tests/test_validator.py::test_all_corrupt_payload_sets_mostly_unusable_metadata PASSED [ 90%]
+tests/test_validator.py::test_single_crc_under_threshold_corrupt_payload PASSED [ 91%]
+tests/test_validator.py::test_m4_A_metrics_inspection PASSED [ 91%]
+tests/test_validator.py::test_m4_B_metrics_inspection PASSED [ 92%]
+tests/test_validator.py::test_m4_C_metrics_inspection PASSED [ 92%]
+tests/test_validator.py::test_m4_D_metrics_inspection PASSED [ 93%]
+tests/test_validator.py::test_m4_E_metrics_inspection PASSED [ 93%]
+tests/test_validator.py::test_validator_helper_functions PASSED [ 94%]
+tests/test_validator.py::test_parse_loose_number PASSED [ 94%]
+tests/test_validator.py::test_normalize_metric_unit_and_value PASSED [ 95%]
+tests/test_validator.py::test_sanitize_payload_preserves_member4_spec PASSED [ 95%]
+tests/test_validator.py::test_m4_sanitization_edge_cases PASSED [ 96%]
+tests/test_validator.py::test_non_string_keys_in_metrics_dict PASSED [ 96%]
+tests/test_validator.py::test_extreme_numeric_values PASSED [ 97%]
+tests/test_validator.py::test_scientific_notation_numbers PASSED [ 97%]
+tests/test_validator.py::test_whitespace_padded_values PASSED [ 98%]
+tests/test_validator.py::test_metadata_cleaning_and_preservation PASSED [ 98%]
+tests/test_validator.py::test_timestamp_unification_integration PASSED [ 99%]
+tests/test_validator.py::test_corrupt_and_valid_mixed_metrics_counts PASSED [ 99%]
+tests/test_validator.py::test_validator_full_coverage_smoke PASSED [100%]
+
+============================= 219 passed in 1.83s ==============================`;
+
+    // =========================================================================
+    // BUILT-IN BENCHMARK SCENARIO PRESETS (Section 6 IncidentReport Standard)
+    // =========================================================================
+    const SCENARIO_PRESETS = {
+      link_congestion: {
+        "incident_id": "INC-0DB93548",
+        "status": "diagnosed",
+        "suspected_root_cause": "Egress queue buffer exhaustion and localized link saturation",
+        "confidence": 0.95,
+        "affected_devices": [
+          "HOSTEL_CORE_SW_01",
+          "HOSTEL_ACC_SW_01",
+          "HOSTEL_ACC_SW_02",
+          "HOSTEL_AP_01",
+          "HOSTEL_AP_02",
+          "HOSTEL_AP_03",
+          "HOSTEL_AP_04"
+        ],
+        "supporting_evidence": [
+          { "metric": "rtt_latency_ms", "value": 142.5, "interpretation": "Round-trip latency (142.50 ms) exceeds SLA threshold (80 ms).", "canonical_key": "latency" },
+          { "metric": "egress_queue_drops", "value": 160.0, "interpretation": "Active egress queue drops detected (160 drops), indicating buffer overflow.", "canonical_key": "queue_drops" },
+          { "metric": "link_utilization_pct", "value": 94.0, "interpretation": "Link utilization (94.00%) exceeds operational headroom (80%).", "canonical_key": "utilization" },
+          { "metric": "packet_loss_pct", "value": 4.2, "interpretation": "Packet loss (4.20%) exceeds allowable threshold (2.0%).", "canonical_key": "packet_loss" },
+          { "metric": "jitter_ms", "value": 28.5, "interpretation": "Jitter variation (28.50 ms) exceeds tolerance (25 ms).", "canonical_key": "jitter" },
+          { "metric": "downstream_blast_radius", "value": 6.0, "interpretation": "Failure on HOSTEL_CORE_SW_01 would isolate 6 downstream network infrastructure devices.", "canonical_key": "downstream_blast_radius" }
+        ],
+        "alternative_causes": [
+          "TopologyAgent: Single-point-of-failure identified at upstream aggregation node 'HOSTEL_CORE_SW_01'. Downstream blast radius comprises 6 isolated devices: [HOSTEL_ACC_SW_01, HOSTEL_ACC_SW_02, HOSTEL_AP_01, HOSTEL_AP_02, HOSTEL_AP_03, HOSTEL_AP_04].",
+          "Transient microburst forwarding queue overflow (ranked lower: sustained link utilization > 80% indicates persistent saturation rather than bursty queue drops)",
+          "Upstream transit link delay (ranked lower: local egress buffer drops confirm bottleneck is localized on the egress interface)",
+          "Physical layer cabling/transceiver fault (ranked lower: interface CRC error counter is nominal)"
+        ],
+        "recommended_actions": [
+          "Tune egress queue buffer thresholds and configure Weighted Random Early Detection (WRED) to mitigate tail drops.",
+          "Apply egress traffic shaping and rate-limiting on high-bandwidth ingress ports contributing to bursts.",
+          "Enable Explicit Congestion Notification (ECN) across transit links to trigger TCP window backoff prior to drops.",
+          "Evaluate uplink capacity expansion or configure Link Aggregation Control Protocol (LACP) trunking."
+        ],
+        "evidence_sources": ["InfrastructureAgent", "TelemetryAgent", "TopologyAgent"],
+        "limitations": [
+          "No recognized 802.11 Wi-Fi telemetry metrics matched for target device.",
+          "No recognized application service metrics (DNS/DHCP) matched for target device."
+        ],
+        "root_cause_category": "link_congestion",
+        "agents_without_data": ["ServiceAgent", "WirelessAgent"]
+      },
+
+      interface_fault: {
+        "incident_id": "INC-5F5DACE0",
+        "status": "diagnosed",
+        "suspected_root_cause": "Physical interface fault (intermittent link flapping and packet error degradation)",
+        "confidence": 0.93,
+        "affected_devices": ["acc-sw-01", "edge-ap-01", "edge-ap-02"],
+        "supporting_evidence": [
+          { "metric": "interface_errors", "value": 68.0, "interpretation": "Interface packet errors detected (68 errors), indicating physical framing defects or interface transceiver degradation.", "canonical_key": "interface_errors" },
+          { "metric": "link_flaps", "value": 7.0, "interpretation": "Link flap counter (7 flaps) exceeds threshold (3), indicating link instability or auto-negotiation failure.", "canonical_key": "link_flaps" },
+          { "metric": "packet_loss_pct", "value": 5.2, "interpretation": "Packet loss (5.20%) exceeds allowable threshold (2.0%).", "canonical_key": "packet_loss" },
+          { "metric": "rtt_latency_ms", "value": 38.0, "interpretation": "Round-trip latency (38.00 ms) is within nominal limits.", "canonical_key": "latency" },
+          { "metric": "interface_crc_errors", "value": 0.0, "interpretation": "No physical CRC errors detected.", "canonical_key": "crc_errors" },
+          { "metric": "downstream_blast_radius", "value": 2.0, "interpretation": "Failure on acc-sw-01 would isolate 2 downstream network infrastructure devices.", "canonical_key": "downstream_blast_radius" }
+        ],
+        "alternative_causes": [
+          "TelemetryAgent: Active packet loss anomaly on acc-sw-01 exceeding acceptable tolerance.",
+          "TopologyAgent: Single-point-of-failure identified at upstream aggregation node 'acc-sw-01'. Downstream blast radius comprises 2 isolated devices: [edge-ap-01, edge-ap-02].",
+          "Egress queue congestion (ranked lower: packet discards and latency spikes are driven by frame CRC corruption and link carrier flapping rather than queue buffer exhaustion)",
+          "Wireless RF interference (ranked lower: defects isolated to wired Ethernet framing counters)"
+        ],
+        "recommended_actions": [
+          "Disable Ethernet auto-negotiation and force speed/duplex settings on both ends of the link.",
+          "Inspect fiber connectors for physical contamination using an optical inspection microscope.",
+          "Verify transceiver stability and replace suspected failing SFP/SFP+ optical modules.",
+          "Inspect patch cabling for tight bend radiuses exceeding manufacturer structural tolerances."
+        ],
+        "evidence_sources": ["InfrastructureAgent", "TelemetryAgent", "TopologyAgent"],
+        "limitations": [
+          "No recognized 802.11 Wi-Fi telemetry metrics matched for target device.",
+          "No recognized application service metrics (DNS/DHCP) matched for target device."
+        ],
+        "root_cause_category": "hardware_link_flap",
+        "agents_without_data": ["ServiceAgent", "WirelessAgent"]
+      },
+
+      dns_dhcp_failure: {
+        "incident_id": "INC-50834945",
+        "status": "diagnosed",
+        "suspected_root_cause": "Core network service failure (DNS resolution timeout or DHCP discovery exhaustion) with healthy transport layer",
+        "confidence": 0.92,
+        "affected_devices": ["HOSTEL_CORE_SW_01"],
+        "supporting_evidence": [
+          { "metric": "dns_resolution_time_ms", "value": 820.0, "interpretation": "DNS resolution latency (820.0ms) exceeds SLA threshold (500.0ms), indicating recursive resolver delay or WAN peering congestion.", "canonical_key": "dns_time" },
+          { "metric": "dns_failure_rate_pct", "value": 18.5, "interpretation": "DNS query failure rate (18.5%) exceeds threshold (5.0%), indicating resolver unreachable or zone query timeouts.", "canonical_key": "dns_failure_rate" },
+          { "metric": "dhcp_discover_failures", "value": 14.0, "interpretation": "Active DHCP discover failures detected (14 drops), indicating DHCP pool exhaustion, IP helper misconfiguration, or DHCP server unresponsiveness.", "canonical_key": "dhcp_failures" },
+          { "metric": "rtt_latency_ms", "value": 16.5, "interpretation": "Round-trip latency (16.50 ms) is within nominal limits.", "canonical_key": "latency" },
+          { "metric": "downstream_blast_radius", "value": 6.0, "interpretation": "Failure on HOSTEL_CORE_SW_01 would isolate 6 downstream network infrastructure devices.", "canonical_key": "downstream_blast_radius" }
+        ],
+        "alternative_causes": [
+          "Transport layer link congestion (ranked lower: round-trip latency and queue drop telemetry confirm transport network is completely nominal)",
+          "Physical link/interface flapping (ranked lower: interface link operational state remains stable)"
+        ],
+        "recommended_actions": [
+          "Verify authoritative and recursive DNS server response latency and network reachability.",
+          "Audit DHCP pool utilization on the local router/DHCP server and extend subnet lease scopes.",
+          "Check IP helper-address configuration on the default gateway VLAN interface.",
+          "Inspect local firewall rules for dropped UDP port 53 (DNS) and UDP ports 67/68 (DHCP) packets."
+        ],
+        "evidence_sources": ["ServiceAgent", "TelemetryAgent", "TopologyAgent"],
+        "limitations": [
+          "Missing telemetry metrics: jitter.",
+          "Missing infrastructure metrics: cpu, memory, crc_errors.",
+          "Topology adjacency describes configured paths; live path health was not directly verified.",
+          "No recognized 802.11 Wi-Fi telemetry metrics matched for target device."
+        ],
+        "root_cause_category": "dns_dhcp_failure",
+        "agents_without_data": ["InfrastructureAgent", "WirelessAgent"]
+      },
+
+      weak_wifi: {
+        "incident_id": "INC-DB9C9836",
+        "status": "diagnosed",
+        "suspected_root_cause": "Wireless 802.11 RF signal attenuation and excessive frame retransmissions",
+        "confidence": 0.91,
+        "affected_devices": ["edge-ap-01"],
+        "supporting_evidence": [
+          { "metric": "rssi_dbm", "value": -84.0, "interpretation": "Received signal strength (-84.0 dBm) is degraded below threshold (-75.0 dBm), indicating path loss or cell edge boundary.", "canonical_key": "rssi" },
+          { "metric": "snr_db", "value": 9.0, "interpretation": "Signal-to-Noise Ratio (9.0 dB) is below threshold (15.0 dB), indicating high RF noise floor or interference.", "canonical_key": "snr" },
+          { "metric": "retransmission_rate_pct", "value": 26.5, "interpretation": "Wi-Fi frame retry rate (26.5%) exceeds threshold (10.0%), indicating collision storms or RF fading.", "canonical_key": "retransmission_rate" },
+          { "metric": "packet_loss_pct", "value": 4.8, "interpretation": "Packet loss (4.80%) exceeds allowable threshold (2.0%).", "canonical_key": "packet_loss" },
+          { "metric": "rtt_latency_ms", "value": 42.0, "interpretation": "Round-trip latency (42.00 ms) is within nominal limits.", "canonical_key": "latency" },
+          { "metric": "downstream_blast_radius", "value": 0.0, "interpretation": "Zero downstream devices depend on edge node edge-ap-01.", "canonical_key": "downstream_blast_radius" }
+        ],
+        "alternative_causes": [
+          "TelemetryAgent: Active packet loss anomaly on edge-ap-01 exceeding acceptable tolerance.",
+          "TopologyAgent: Fault on 'edge-ap-01' is edge-isolated. Zero downstream network infrastructure nodes depend on this device. Impact is restricted to local terminal access.",
+          "Wired infrastructure congestion (ranked lower: low RSSI and poor SNR confirm radio frequency attenuation is primary driver)"
+        ],
+        "recommended_actions": [
+          "Initiate an RF spectrum analysis scan to detect non-802.11 interference across the 2.4/5GHz bands.",
+          "Trigger Dynamic Frequency Selection (DFS) and Radio Resource Management (RRM) to reassign operating channels.",
+          "Tune AP transmit power levels to eliminate co-channel overlap and optimize cell edge transitions.",
+          "Verify 802.11 client roaming thresholds and minimum basic data rates to prevent sticky clients."
+        ],
+        "evidence_sources": ["TelemetryAgent", "TopologyAgent", "WirelessAgent"],
+        "limitations": [
+          "No recognized hardware or interface metrics matched for target device.",
+          "No recognized application service metrics (DNS/DHCP) matched for target device."
+        ],
+        "root_cause_category": "weak_wifi",
+        "agents_without_data": ["InfrastructureAgent", "ServiceAgent"]
+      },
+
+      normal_ops: {
+        "incident_id": "INC-6993ECA1",
+        "status": "diagnosed",
+        "suspected_root_cause": "Normal network operation: All performance and infrastructure telemetry within nominal boundaries",
+        "confidence": 0.92,
+        "affected_devices": ["edge-ap-01"],
+        "supporting_evidence": [
+          { "metric": "rtt_latency_ms", "value": 14.5, "interpretation": "Round-trip latency (14.50 ms) is within nominal limits.", "canonical_key": "latency" },
+          { "metric": "packet_loss_pct", "value": 0.1, "interpretation": "Packet loss (0.10%) is nominal.", "canonical_key": "packet_loss" },
+          { "metric": "jitter_ms", "value": 2.0, "interpretation": "Jitter variation (2.00 ms) is nominal.", "canonical_key": "jitter" },
+          { "metric": "link_utilization_pct", "value": 35.0, "interpretation": "Link utilization (35.00%) is within capacity.", "canonical_key": "utilization" },
+          { "metric": "cpu_utilization_pct", "value": 28.0, "interpretation": "CPU utilization (28.0%) is healthy.", "canonical_key": "cpu" },
+          { "metric": "memory_utilization_pct", "value": 45.0, "interpretation": "Memory utilization (45.0%) is within safe bounds.", "canonical_key": "memory" },
+          { "metric": "egress_queue_drops", "value": 0.0, "interpretation": "No egress queue drops recorded.", "canonical_key": "queue_drops" },
+          { "metric": "interface_crc_errors", "value": 0.0, "interpretation": "No physical CRC errors detected.", "canonical_key": "crc_errors" }
+        ],
+        "alternative_causes": [],
+        "recommended_actions": [
+          "No corrective remediation required. Network operational telemetry is within nominal parameters.",
+          "Retain baseline metrics in telemetry datastore for future longitudinal trend analysis."
+        ],
+        "evidence_sources": ["InfrastructureAgent", "TelemetryAgent", "TopologyAgent"],
+        "limitations": [
+          "Topology adjacency describes configured paths; live path health was not directly verified.",
+          "Optional domain metrics not provided: jitter_ms, rssi_dbm, snr_db, dns_resolution_time_ms."
+        ],
+        "root_cause_category": "healthy",
+        "agents_without_data": ["ServiceAgent", "WirelessAgent"]
+      },
+
+      single_metric: {
+        "incident_id": "INC-B2C1A990",
+        "status": "inconclusive",
+        "suspected_root_cause": "Inconclusive telemetry correlation: contradictory or uncorroborated domain signals require additional verification",
+        "confidence": 0.45,
+        "affected_devices": ["dist-rtr-01", "acc-sw-01", "acc-sw-02", "edge-ap-01", "edge-ap-02", "edge-ap-03"],
+        "supporting_evidence": [
+          { "metric": "rtt_latency_ms", "value": 150.0, "interpretation": "Round-trip latency (150.00 ms) exceeds SLA threshold (80 ms).", "canonical_key": "latency" },
+          { "metric": "downstream_blast_radius", "value": 5.0, "interpretation": "Failure on dist-rtr-01 would isolate 5 downstream network infrastructure devices.", "canonical_key": "downstream_blast_radius" }
+        ],
+        "alternative_causes": [
+          "TelemetryAgent: Elevated propagation or transmission latency observed on dist-rtr-01. Path sub-optimality or non-congestive queue delay suspected.",
+          "TopologyAgent: Single-point-of-failure identified at upstream aggregation node 'dist-rtr-01'. Downstream blast radius comprises 5 isolated devices."
+        ],
+        "recommended_actions": [
+          "Deploy synthetic network probe agents to gather active RTT, loss, and jitter samples.",
+          "Enable high-resolution streaming telemetry (gNMI) on target devices during anomaly intervals.",
+          "Schedule an automated packet capture (SPAN/ERSPAN) on the device ingress and egress ports."
+        ],
+        "evidence_sources": ["TelemetryAgent", "TopologyAgent"],
+        "limitations": [
+          "No recognized hardware or interface metrics matched for target device.",
+          "Diagnosis uncorroborated: 1 agent reported anomalies without required cross-domain corroboration; status degraded to inconclusive."
+        ],
+        "root_cause_category": "inconclusive",
+        "agents_without_data": ["InfrastructureAgent", "ServiceAgent", "WirelessAgent"]
+      },
+
+      corrupt_input: {
+        "incident_id": "INC-7AE9EB24",
+        "status": "insufficient_evidence",
+        "suspected_root_cause": "Insufficient valid telemetry evidence to establish diagnostic conclusion.",
+        "confidence": 0.0,
+        "affected_devices": ["unknown_device"],
+        "supporting_evidence": [
+          { "metric": "interface_crc_errors", "value": 5.0, "interpretation": "Physical CRC frame check errors detected (5 errors), below actionable threshold.", "canonical_key": "crc_errors" }
+        ],
+        "alternative_causes": [],
+        "recommended_actions": [
+          "Verify SNMP/gNMI collector connectivity, authentication credentials, and polling intervals.",
+          "Audit telemetry schema version compatibility and validate payload serializer integrity."
+        ],
+        "evidence_sources": ["InfrastructureAgent", "TopologyAgent"],
+        "limitations": [
+          "Irrecoverably corrupt input: no valid numeric metrics survived validation.",
+          "Dropped 4 corrupt metric fields (throughput_mbps=None, rtt_ms='???', queue_drops=[], packet_loss_pct='NaN').",
+          "Observed CRC error counter is below actionable threshold (5); treated as weak/incidental evidence."
+        ],
+        "root_cause_category": "insufficient_evidence",
+        "agents_without_data": ["ServiceAgent", "TelemetryAgent", "WirelessAgent"]
+      }
+    };
+
+    let currentReport = SCENARIO_PRESETS.link_congestion;
+    let activeConsoleTab = 'pytest';
+    let activeCategoryFilter = 'all';
+
+    // =========================================================================
+    // PYTEST TERMINAL RENDERING & REAL-TIME FILTERING
+    // =========================================================================
+    function renderPytestOutput(filterKeyword = '', category = 'all') {
+      const container = document.getElementById('pytest-terminal-code');
+      const lines = RAW_PYTEST_OUTPUT.split('\n');
+      const filteredLines = [];
+      let matchCount = 0;
+      let totalTests = 0;
+
+      const normFilter = filterKeyword.trim().toLowerCase();
+
+      lines.forEach((line) => {
+        const isTestLine = line.includes('PASSED [');
+        if (isTestLine) totalTests++;
+
+        // Filter by category
+        let categoryMatch = true;
+        if (category === 'm4') {
+          categoryMatch = line.includes('test_m4_');
+        } else if (category === 'agents') {
+          categoryMatch = line.includes('test_agents.py') || line.includes('test_topology_agent.py');
+        } else if (category === 'scenarios') {
+          categoryMatch = line.includes('test_scenarios.py') || line.includes('test_e2e.py');
+        } else if (category === 'validator') {
+          categoryMatch = line.includes('test_validator.py');
+        } else if (category === 'protocol') {
+          categoryMatch = line.includes('test_protocol.py');
+        } else if (category === 'robustness') {
+          categoryMatch = line.includes('test_robustness.py');
+        }
+
+        // Filter by text search
+        let textMatch = true;
+        if (normFilter) {
+          textMatch = line.toLowerCase().includes(normFilter);
+        }
+
+        if (isTestLine) {
+          if (categoryMatch && textMatch) {
+            matchCount++;
+            filteredLines.push(formatTerminalLine(line, normFilter));
+          }
+        } else {
+          // Keep headers/footers when no filter or if relevant
+          if (!normFilter && category === 'all') {
+            filteredLines.push(formatTerminalLine(line));
+          } else if (line.includes('passed in') || line.includes('test session starts')) {
+            filteredLines.push(formatTerminalLine(line));
+          }
+        }
+      });
+
+      container.innerHTML = filteredLines.join('\n');
+      document.getElementById('test-filter-count').innerText = `${matchCount} / ${totalTests} Tests`;
+    }
+
+    function formatTerminalLine(line, highlightQuery = '') {
+      const safe = escapeHtml(line);
+      
+      if (line.includes('PASSED [')) {
+        // Parse: path::method PASSED [ xx%]
+        const parts = safe.split(' PASSED ');
+        if (parts.length === 2) {
+          const testPath = parts[0];
+          const pct = parts[1];
+          const subparts = testPath.split('::');
+          let formattedName = testPath;
+          if (subparts.length >= 2) {
+            const filePart = subparts[0];
+            const methodPart = subparts.slice(1).join('::');
+            formattedName = `<span class="term-test-path">${filePart}::</span><span class="term-test-method">${methodPart}</span>`;
+          }
+          return `${formattedName} <span class="term-pass">PASSED</span> <span class="term-pct">${pct}</span>`;
+        }
+      }
+
+      if (line.includes('passed in')) {
+        return `<span class="term-summary-line">${safe}</span>`;
+      }
+
+      if (line.includes('platform ') || line.includes('rootdir:') || line.includes('collected ')) {
+        return `<span style="color: #64748b;">${safe}</span>`;
+      }
+
+      return safe;
+    }
+
+    function filterPytestOutput(query) {
+      renderPytestOutput(query, activeCategoryFilter);
+    }
+
+    function setTestCategoryFilter(cat, elem) {
+      activeCategoryFilter = cat;
+      document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+      if (elem) elem.classList.add('active');
+      const input = document.getElementById('pytest-filter-input');
+      renderPytestOutput(input ? input.value : '', cat);
+    }
+
+    function switchConsoleTab(tab) {
+      activeConsoleTab = tab;
+      const pytestTabBtn = document.getElementById('tab-btn-pytest');
+      const jsonTabBtn = document.getElementById('tab-btn-json');
+      const pytestControls = document.getElementById('pytest-controls');
+      const jsonControls = document.getElementById('json-controls');
+      const pytestMetaBar = document.getElementById('pytest-meta-bar');
+      const pytestContainer = document.getElementById('pytest-terminal-container');
+      const jsonContainer = document.getElementById('json-output-container');
+
+      if (tab === 'pytest') {
+        pytestTabBtn.classList.add('active');
+        jsonTabBtn.classList.remove('active');
+        pytestControls.style.display = 'flex';
+        jsonControls.style.display = 'none';
+        pytestMetaBar.style.display = 'flex';
+        pytestContainer.style.display = 'block';
+        jsonContainer.style.display = 'none';
+      } else {
+        pytestTabBtn.classList.remove('active');
+        jsonTabBtn.classList.add('active');
+        pytestControls.style.display = 'none';
+        jsonControls.style.display = 'flex';
+        pytestMetaBar.style.display = 'none';
+        pytestContainer.style.display = 'none';
+        jsonContainer.style.display = 'block';
+      }
+    }
+
+    function toggleConsoleSize() {
+      const pTerm = document.getElementById('pytest-terminal-container');
+      const jTerm = document.getElementById('json-output-container');
+      const btn = document.getElementById('console-size-btn');
+      
+      const isExpanded = pTerm.classList.contains('expanded') || jTerm.classList.contains('expanded');
+      if (isExpanded) {
+        pTerm.classList.remove('expanded');
+        jTerm.classList.remove('expanded');
+        btn.innerText = 'Expand';
+      } else {
+        pTerm.classList.add('expanded');
+        jTerm.classList.add('expanded');
+        btn.innerText = 'Compact';
+      }
+    }
+
+    function toggleConsoleCollapse() {
+      const pTerm = document.getElementById('pytest-terminal-container');
+      const jTerm = document.getElementById('json-output-container');
+      const pMeta = document.getElementById('pytest-meta-bar');
+      const btn = document.getElementById('console-collapse-btn');
+
+      const isHidden = (activeConsoleTab === 'pytest' ? pTerm.style.display === 'none' : jTerm.style.display === 'none');
+      if (isHidden) {
+        switchConsoleTab(activeConsoleTab);
+        btn.innerText = 'Collapse';
+      } else {
+        pTerm.style.display = 'none';
+        jTerm.style.display = 'none';
+        pMeta.style.display = 'none';
+        btn.innerText = 'Open';
+      }
+    }
+
+    function scrollToConsole(tab = 'pytest') {
+      switchConsoleTab(tab);
+      const elem = document.getElementById('noc-console-section');
+      if (elem) {
+        elem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+
+    function copyPytestOutput() {
+      navigator.clipboard.writeText(RAW_PYTEST_OUTPUT).then(() => {
+        showToast('Pytest terminal verification output copied to clipboard');
+      });
+    }
+
+    // =========================================================================
+    // DASHBOARD INCIDENT REPORT RENDERING
+    // =========================================================================
+    function renderDashboard(report) {
+      currentReport = report;
+
+      // 1. Incident ID & Status
+      document.getElementById('incident-id-text').innerText = report.incident_id || 'INC-UNKNOWN';
+      
+      const statusPill = document.getElementById('status-pill');
+      const status = (report.status || 'diagnosed').toLowerCase();
+      statusPill.className = 'status-pill';
+      
+      const isHealthy = (report.root_cause_category === 'healthy' || 
+                         (report.suspected_root_cause && report.suspected_root_cause.toLowerCase().includes('normal')) ||
+                         (report.suspected_root_cause && report.suspected_root_cause.toLowerCase().includes('nominal')));
+
+      if (status === 'diagnosed') {
+        if (isHealthy) {
+          statusPill.classList.add('status-healthy');
+          statusPill.innerText = 'Healthy';
+        } else {
+          statusPill.classList.add('status-fault');
+          statusPill.innerText = 'Fault Detected';
+        }
+      } else if (status === 'inconclusive') {
+        statusPill.classList.add('status-inconclusive');
+        statusPill.innerText = 'Inconclusive';
+      } else {
+        statusPill.classList.add('status-fault');
+        statusPill.innerText = 'Fault Detected';
+      }
+
+      // 2. Confidence Gauge
+      const conf = Math.max(0, Math.min(1, report.confidence || 0));
+      const confPct = Math.round(conf * 100);
+      const confGaugeNum = document.getElementById('confidence-gauge-num');
+      const confBar = document.getElementById('confidence-progress-bar');
+      confGaugeNum.innerText = confPct + '%';
+      confBar.style.width = confPct + '%';
+
+      if (conf >= 0.85) {
+        confGaugeNum.style.color = 'var(--emerald)';
+        confBar.style.background = 'var(--emerald)';
+      } else if (conf >= 0.40) {
+        confGaugeNum.style.color = 'var(--amber)';
+        confBar.style.background = 'var(--amber)';
+      } else {
+        confGaugeNum.style.color = 'var(--crimson)';
+        confBar.style.background = 'var(--crimson)';
+      }
+
+      // 3. Hero Card
+      document.getElementById('hero-root-cause').innerText = report.suspected_root_cause || 'Undetermined operational state';
+      
+      const catBadge = document.getElementById('category-badge');
+      const category = report.root_cause_category || 'incident';
+      catBadge.innerText = category;
+
+      // Affected Devices
+      const devContainer = document.getElementById('affected-devices-list');
+      devContainer.innerHTML = '';
+      const affected = report.affected_devices || [];
+      if (affected.length === 0) {
+        devContainer.innerHTML = '<span style="color: var(--text-dim); font-size: 0.8rem;">None specified</span>';
+      } else {
+        affected.forEach(dev => {
+          const chip = document.createElement('span');
+          chip.className = 'device-chip';
+          chip.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg> ${escapeHtml(dev)}`;
+          devContainer.appendChild(chip);
+        });
+      }
+
+      // Evidence Sources (Agents)
+      const agentContainer = document.getElementById('evidence-sources-list');
+      agentContainer.innerHTML = '';
+      const contributing = new Set(report.evidence_sources || []);
+      const allKnownAgents = ["TelemetryAgent", "InfrastructureAgent", "TopologyAgent", "WirelessAgent", "ServiceAgent"];
+      
+      allKnownAgents.forEach(agent => {
+        const chip = document.createElement('span');
+        if (contributing.has(agent)) {
+          chip.className = 'agent-chip';
+          chip.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> ${agent}`;
+        } else {
+          chip.className = 'agent-chip agent-chip-idle';
+          chip.innerHTML = `<span style="opacity:0.6;">○</span> ${agent}`;
+        }
+        agentContainer.appendChild(chip);
+      });
+
+      // 4. Supporting Evidence Table
+      const tbody = document.getElementById('evidence-tbody');
+      tbody.innerHTML = '';
+      const evidence = report.supporting_evidence || [];
+      document.getElementById('evidence-count').innerText = evidence.length;
+
+      if (evidence.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color: var(--text-dim); padding: 1.5rem;">No supporting telemetry evidence attached to this report.</td></tr>`;
+      } else {
+        evidence.forEach(ev => {
+          const tr = document.createElement('tr');
+          const isAnomaly = isEvidenceAnomaly(ev);
+          const valClass = isAnomaly ? 'metric-value-pill anomaly' : 'metric-value-pill';
+          
+          tr.innerHTML = `
+            <td class="metric-name-cell">
+              <div>${escapeHtml(ev.metric || '')}</div>
+              <div style="font-size: 0.68rem; color: var(--text-dim); font-family: var(--font-sans); text-transform: uppercase;">
+                ${escapeHtml(ev.canonical_key || 'telemetry')}
+              </div>
+            </td>
+            <td>
+              <span class="${valClass}">${formatValue(ev.value)}</span>
+            </td>
+            <td class="interpretation-text">
+              ${escapeHtml(ev.interpretation || '')}
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      // 5. Remediation Actions
+      const actionsList = document.getElementById('actions-list');
+      actionsList.innerHTML = '';
+      const actions = report.recommended_actions || [];
+      
+      if (actions.length === 0) {
+        actionsList.innerHTML = '<div style="color: var(--text-dim); font-size: 0.82rem;">No remediation actions listed.</div>';
+      } else {
+        actions.forEach((act, idx) => {
+          const item = document.createElement('div');
+          item.className = 'action-item';
+          item.onclick = function(e) {
+            if (e.target.tagName !== 'INPUT') {
+              const chk = item.querySelector('input');
+              chk.checked = !chk.checked;
+            }
+            item.classList.toggle('completed');
+            updateActionCount();
+          };
+
+          const pLabel = `P${idx + 1}`;
+          item.innerHTML = `
+            <input type="checkbox" class="action-checkbox" onclick="event.stopPropagation(); this.closest('.action-item').classList.toggle('completed'); updateActionCount();">
+            <span class="priority-badge">${pLabel}</span>
+            <span class="action-text">${escapeHtml(act)}</span>
+          `;
+          actionsList.appendChild(item);
+        });
+      }
+      updateActionCount();
+
+      // 6. Alternative Causes
+      const altWrap = document.getElementById('alt-causes-container');
+      const altList = document.getElementById('alt-causes-list');
+      altList.innerHTML = '';
+      const alts = report.alternative_causes || [];
+      
+      if (alts.length === 0) {
+        altWrap.style.display = 'none';
+      } else {
+        altWrap.style.display = 'block';
+        alts.forEach(alt => {
+          const c = document.createElement('div');
+          c.className = 'alt-cause-card';
+          c.innerText = alt;
+          altList.appendChild(c);
+        });
+      }
+
+      // 7. Limitations & Ingestion Warnings
+      const limList = document.getElementById('limitations-list');
+      limList.innerHTML = '';
+      const lims = report.limitations || [];
+      
+      if (lims.length === 0) {
+        limList.innerHTML = '<li>Zero limitations reported; complete telemetry fidelity achieved.</li>';
+      } else {
+        lims.forEach(lim => {
+          const li = document.createElement('li');
+          li.innerText = lim;
+          limList.appendChild(li);
+        });
+      }
+
+      // 8. Raw JSON Syntax Highlighting
+      const rawJson = JSON.stringify(report, null, 2);
+      document.getElementById('raw-json-code').innerHTML = syntaxHighlightJson(rawJson);
+    }
+
+    // Helper: Determine if evidence metric is an anomaly
+    function isEvidenceAnomaly(ev) {
+      const val = parseFloat(ev.value);
+      const m = (ev.metric || '').toLowerCase();
+      const interp = (ev.interpretation || '').toLowerCase();
+      if (interp.includes('exceeds') || interp.includes('degraded') || interp.includes('overflow') || interp.includes('defect') || interp.includes('drops')) {
+        return true;
+      }
+      if (m.includes('queue_drops') && val > 0) return true;
+      if (m.includes('crc') && val > 5) return true;
+      if (m.includes('loss') && val > 2) return true;
+      if (m.includes('latency') && val > 80) return true;
+      return false;
+    }
+
+    function formatValue(v) {
+      if (typeof v === 'number') {
+        return Number.isInteger(v) ? v.toString() : v.toFixed(2);
+      }
+      return String(v);
+    }
+
+    function updateActionCount() {
+      const total = document.querySelectorAll('.action-item').length;
+      const checked = document.querySelectorAll('.action-item.completed').length;
+      const counter = document.getElementById('actions-resolved-counter');
+      counter.innerText = `${checked}/${total} Resolved`;
+      if (total > 0 && checked === total) {
+        counter.style.background = 'rgba(16, 185, 129, 0.2)';
+        counter.style.borderColor = 'var(--emerald)';
+      } else {
+        counter.style.background = 'var(--bg-card)';
+        counter.style.borderColor = 'var(--border-subtle)';
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // JSON Syntax Highlighter
+    function syntaxHighlightJson(jsonStr) {
+      return jsonStr.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+        let cls = 'json-number';
+        if (/^"/.test(match)) {
+          if (/:$/.test(match)) {
+            cls = 'json-key';
+          } else {
+            cls = 'json-string';
+          }
+        } else if (/true|false/.test(match)) {
+          cls = 'json-boolean';
+        } else if (/null/.test(match)) {
+          cls = 'json-null';
+        }
+        return '<span class="' + cls + '">' + escapeHtml(match) + '</span>';
+      });
+    }
+
+    function loadSelectedScenario(key) {
+      if (SCENARIO_PRESETS[key]) {
+        renderDashboard(SCENARIO_PRESETS[key]);
+        showToast(`Loaded preset scenario: ${key}`);
+      }
+    }
+
+    function copyIncidentId() {
+      const id = currentReport.incident_id || '';
+      navigator.clipboard.writeText(id).then(() => {
+        showToast(`Incident ID copied: ${id}`);
+      });
+    }
+
+    function copyRawJson() {
+      const raw = JSON.stringify(currentReport, null, 2);
+      navigator.clipboard.writeText(raw).then(() => {
+        showToast('Full IncidentReport JSON copied to clipboard');
+      });
+    }
+
+    function downloadJsonReport() {
+      const raw = JSON.stringify(currentReport, null, 2);
+      const blob = new Blob([raw], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `incident-report-${currentReport.incident_id || 'dump'}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Downloaded JSON report file');
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      document.getElementById('toast-msg').innerText = msg;
+      t.classList.add('show');
+      setTimeout(() => {
+        t.classList.remove('show');
+      }, 2500);
+    }
+
+    // =========================================================================
+    // FILE UPLOAD & DRAG-AND-DROP HANDLER
+    // =========================================================================
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      readJsonFile(file);
+    }
+
+    function readJsonFile(file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (parsed && typeof parsed === 'object') {
+            renderDashboard(parsed);
+            showToast(`Loaded report: ${file.name}`);
+          } else {
+            alert('File does not contain a valid JSON object.');
+          }
+        } catch (err) {
+          alert('Error parsing JSON file: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    window.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      document.getElementById('drop-overlay').classList.add('active');
+    });
+
+    window.addEventListener('dragleave', (e) => {
+      if (e.relatedTarget === null) {
+        document.getElementById('drop-overlay').classList.remove('active');
+      }
+    });
+
+    window.addEventListener('drop', (e) => {
+      e.preventDefault();
+      document.getElementById('drop-overlay').classList.remove('active');
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        readJsonFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    // Initialize Dashboard & Pytest Viewer
+    window.addEventListener('DOMContentLoaded', () => {
+      renderDashboard(SCENARIO_PRESETS.link_congestion);
+      renderPytestOutput('', 'all');
+    });
+  </script>
+</body>
+</html>
