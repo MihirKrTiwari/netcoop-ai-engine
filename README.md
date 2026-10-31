@@ -167,3 +167,21 @@ python main.py --scenario scenarios/link_congestion.json --output report.json
 ```bash
 pytest -v
 ```
+## Infrastructure Health Agent
+
+Checks the device itself: CPU, memory, egress queue drops, CRC/interface errors, link flaps and device/link status. Input is `RawTelemetryPayload`; output is `AgentFinding` (status, hypothesis, confidence 0-1, evidence, affected devices, limitations).
+
+| Check | Flagged when | Diagnosis | Confidence |
+|---|---|---|---|
+| Device status | = 0 (down) | Node shutdown / hardware failure | 0.96 |
+| Link state | = 0 (down) | Interface link-down | 0.95 |
+| Link flaps | > 3 | Link instability | 0.93 |
+| CRC + queue drops | both > 0 | Cabling fault causing queue exhaustion | 0.95 |
+| CRC / interface errors | > 0 | Cabling or transceiver degradation | 0.92 |
+| Queue drops + high CPU/memory | drops > 0 and CPU > 85% or memory > 90% | Resource saturation | 0.90 |
+| CPU + memory | CPU > 85% and memory > 90% | Control-plane exhaustion | 0.94 |
+| Queue drops only | > 0 | Buffer overflow (congestion) | 0.88 |
+| CPU or memory only | above threshold | CPU spike / memory exhaustion | 0.85 |
+| Normal readings | within limits | Healthy | 0.92 |
+
+Confidence reflects how direct the evidence is: hard failures and physical errors score highest, a single resource spike lowest. Units: percentages (ratios are converted), counts, and state values (0 = down). The newest sample per metric is used, and only the target device's metrics. If no CPU or memory metric exists the agent returns insufficient evidence (0.45); with no usable metrics at all, 0.0. Missing metrics are listed under limitations. Tests: `tests/test_infrastructure.py`.
