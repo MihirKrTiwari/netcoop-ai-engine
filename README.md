@@ -167,6 +167,7 @@ python main.py --scenario scenarios/link_congestion.json --output report.json
 ```bash
 pytest -v
 ```
+
 ## Infrastructure Health Agent
 
 Checks the device itself: CPU, memory, egress queue drops, CRC/interface errors, link flaps and device/link status. Input is `RawTelemetryPayload`; output is `AgentFinding` (status, hypothesis, confidence 0-1, evidence, affected devices, limitations).
@@ -184,4 +185,4 @@ Checks the device itself: CPU, memory, egress queue drops, CRC/interface errors,
 | CPU or memory only | above threshold | CPU spike / memory exhaustion | 0.85 |
 | Normal readings | within limits | Healthy | 0.92 |
 
-Confidence reflects how direct the evidence is: hard failures and physical errors score highest, a single resource spike lowest. Units: percentages (ratios are converted), counts, and state values (0 = down). The newest sample per metric is used, and only the target device's metrics. If no CPU or memory metric exists the agent returns insufficient evidence (0.45); with no usable metrics at all, 0.0. Missing metrics are listed under limitations. Tests: `tests/test_infrastructure.py`.
+Rules are checked top to bottom and the first match wins. Confidence reflects how direct the evidence is: hard failures and physical errors score highest, a single resource spike lowest. Units: percentages (ratios are converted), counts, and state values (0 = down). The newest sample per metric is used, and only the target device's metrics. The agent flags any non-zero CRC count; the Arbiter then treats CRC counts of 5 or less as weak evidence unless other symptoms corroborate them. If no CPU or memory metric exists the agent returns insufficient evidence (0.45); with no usable metrics at all, 0.0. Missing metrics are listed under limitations. Tests: `tests/test_infrastructure.py`.
