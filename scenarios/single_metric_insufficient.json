@@ -1,0 +1,17 @@
+{
+  "scenario_id": "scenario_single_metric_insufficient_01",
+  "target_device": "dist-rtr-01",
+  "metadata": {
+    "site": "Core Data Center",
+    "notes": "Single uncorroborated metric must never produce a diagnosed root cause"
+  },
+  "metrics": [
+    {
+      "metric_name": "rtt_latency_ms",
+      "value": 150.0,
+      "unit": "ms",
+      "timestamp": "2026-10-31T14:30:00Z",
+      "device_id": "dist-rtr-01"
+    }
+  ]
+}

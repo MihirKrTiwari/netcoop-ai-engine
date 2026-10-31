@@ -1,0 +1,26 @@
+{
+  "scenario_id": "scenario_interop_unit_in_value_01",
+  "target_device": "HOSTEL_CORE_SW_01",
+  "metadata": {
+    "source": "CLIParser",
+    "parser_notes": "Unit suffixes embedded inside value strings"
+  },
+  "metrics": [
+    {
+      "metric_name": "rtt_latency_ms",
+      "value": "142.5ms"
+    },
+    {
+      "metric_name": "egress_queue_drops",
+      "value": "160 drops"
+    },
+    {
+      "metric_name": "link_utilization_pct",
+      "value": "94%"
+    },
+    {
+      "metric_name": "packet_loss_pct",
+      "value": "4.2%"
+    }
+  ]
+}
