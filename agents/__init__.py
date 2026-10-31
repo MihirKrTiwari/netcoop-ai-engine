@@ -1,1 +1,8 @@
-# Export shared agent interfaces or implementations here when the package needs a public API.
+"""
+agents package initialization.
+Exports base agent abstraction and domain agents for NetCoop AI.
+"""
+
+from agents.base import BaseAgent
+
+__all__ = ["BaseAgent"]

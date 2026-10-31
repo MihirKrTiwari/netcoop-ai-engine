@@ -1,17 +1,16 @@
-# Expose the core orchestration and communication components as the package API.
-
 """
 core package initialization.
-Exports key schemas and utilities for easy access across the project.
+Exports standardized schemas and the ingestion validator for NetCoop AI.
 """
 
 from core.schemas import (
-    TelemetryMetric,
-    RawTelemetryPayload,
-    MetricEvidence,
     AgentFinding,
     IncidentReport,
+    MetricEvidence,
+    RawTelemetryPayload,
+    TelemetryMetric,
 )
+from core.validator import validate_and_sanitize_payload
 
 __all__ = [
     "TelemetryMetric",
@@ -19,4 +18,5 @@ __all__ = [
     "MetricEvidence",
     "AgentFinding",
     "IncidentReport",
+    "validate_and_sanitize_payload",
 ]
