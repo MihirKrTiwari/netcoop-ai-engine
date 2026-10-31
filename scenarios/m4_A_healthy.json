@@ -1,0 +1,16 @@
+{
+  "scenario_id": "A_healthy_baseline",
+  "description": "Normal campus operations. All metrics are within baseline limits.",
+  "timestamp": "2026-10-31T09:00:00Z",
+  "device_id": "core-sw-01",
+  "metrics": {
+    "throughput_mbps": 310.5,
+    "link_utilization_pct": 31.0,
+    "queue_drops": 0,
+    "rtt_ms": 4.2,
+    "packet_loss_pct": 0.0,
+    "crc_errors": 0,
+    "interface_flaps": 0
+  },
+  "expected": {"root_cause": "healthy", "status": "healthy", "validation": "ok"}
+}
