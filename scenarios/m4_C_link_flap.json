@@ -1,0 +1,16 @@
+{
+  "scenario_id": "C_hardware_link_flap",
+  "description": "Faulty cable/optic: high interface CRC errors, link flaps and intermittent packet drop while utilization stays low.",
+  "timestamp": "2026-10-31T11:15:00Z",
+  "device_id": "access-sw-07",
+  "metrics": {
+    "throughput_mbps": 120.0,
+    "link_utilization_pct": 12.0,
+    "queue_drops": 3,
+    "rtt_ms": 18.0,
+    "packet_loss_pct": 6.8,
+    "crc_errors": 1450,
+    "interface_flaps": 9
+  },
+  "expected": {"root_cause": "hardware_link_flap", "status": "diagnosed", "validation": "ok"}
+}

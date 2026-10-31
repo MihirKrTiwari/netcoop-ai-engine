@@ -1,0 +1,13 @@
+{
+  "scenario_id": "E_irrecoverable_corruption",
+  "description": "Irrecoverably corrupt telemetry: nothing numeric survives. Must produce an insufficient_evidence report, never an exception.",
+  "timestamp": "not-a-date",
+  "metrics": {
+    "throughput_mbps": null,
+    "rtt_ms": "???",
+    "queue_drops": [],
+    "crc_errors": {"value": 5},
+    "packet_loss_pct": "NaN"
+  },
+  "expected": {"root_cause": "insufficient_evidence", "status": "insufficient_evidence", "validation": "insufficient_evidence"}
+}
