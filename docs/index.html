@@ -1506,7 +1506,7 @@
           <svg class="select-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
 
-        <label class="btn-upload-primary" title="Upload local Section 6 IncidentReport JSON">
+        <label class="btn-upload-primary" title="Upload Telemetry Scenario or Section 6 IncidentReport JSON">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
           <span>Upload JSON</span>
           <input type="file" id="json-file-input" accept=".json" onchange="handleFileUpload(event)">
@@ -2797,12 +2797,674 @@ tests/test_validator.py::test_future_schema_version PASSED [ 77%]
     }
 
     // =========================================================================
+    // SECTION 6 CLIENT-SIDE MULTI-AGENT DIAGNOSTIC ENGINE
+    // =========================================================================
+    const ALIAS_MAP = {
+      // Latency
+      rtt_latency_ms: { ckey: 'latency', canonName: 'rtt_latency_ms', unit: 'ms' },
+      latency_ms: { ckey: 'latency', canonName: 'rtt_latency_ms', unit: 'ms' },
+      rtt_ms: { ckey: 'latency', canonName: 'rtt_latency_ms', unit: 'ms' },
+      latency: { ckey: 'latency', canonName: 'rtt_latency_ms', unit: 'ms' },
+      ping_ms: { ckey: 'latency', canonName: 'rtt_latency_ms', unit: 'ms' },
+      round_trip_time_ms: { ckey: 'latency', canonName: 'rtt_latency_ms', unit: 'ms' },
+      delay_ms: { ckey: 'latency', canonName: 'rtt_latency_ms', unit: 'ms' },
+      network_latency_ms: { ckey: 'latency', canonName: 'rtt_latency_ms', unit: 'ms' },
+
+      // Packet loss
+      packet_loss_pct: { ckey: 'packet_loss', canonName: 'packet_loss_pct', unit: '%' },
+      packet_loss: { ckey: 'packet_loss', canonName: 'packet_loss_pct', unit: '%' },
+      loss_pct: { ckey: 'packet_loss', canonName: 'packet_loss_pct', unit: '%' },
+      drop_rate_pct: { ckey: 'packet_loss', canonName: 'packet_loss_pct', unit: '%' },
+      loss_percentage: { ckey: 'packet_loss', canonName: 'packet_loss_pct', unit: '%' },
+
+      // Jitter
+      jitter_ms: { ckey: 'jitter', canonName: 'jitter_ms', unit: 'ms' },
+      jitter: { ckey: 'jitter', canonName: 'jitter_ms', unit: 'ms' },
+      delay_variation_ms: { ckey: 'jitter', canonName: 'jitter_ms', unit: 'ms' },
+      latency_jitter_ms: { ckey: 'jitter', canonName: 'jitter_ms', unit: 'ms' },
+
+      // Utilization
+      link_utilization_pct: { ckey: 'utilization', canonName: 'link_utilization_pct', unit: '%' },
+      link_utilization: { ckey: 'utilization', canonName: 'link_utilization_pct', unit: '%' },
+      utilization_pct: { ckey: 'utilization', canonName: 'link_utilization_pct', unit: '%' },
+      bandwidth_utilization_pct: { ckey: 'utilization', canonName: 'link_utilization_pct', unit: '%' },
+      interface_utilization_pct: { ckey: 'utilization', canonName: 'link_utilization_pct', unit: '%' },
+      link_load_pct: { ckey: 'utilization', canonName: 'link_utilization_pct', unit: '%' },
+
+      // Throughput
+      throughput_mbps: { ckey: 'throughput', canonName: 'throughput_mbps', unit: 'mbps' },
+      throughput: { ckey: 'throughput', canonName: 'throughput_mbps', unit: 'mbps' },
+      bandwidth_mbps: { ckey: 'throughput', canonName: 'throughput_mbps', unit: 'mbps' },
+      data_rate_mbps: { ckey: 'throughput', canonName: 'throughput_mbps', unit: 'mbps' },
+      egress_throughput: { ckey: 'throughput', canonName: 'throughput_mbps', unit: 'mbps' },
+
+      // CPU
+      cpu_utilization_pct: { ckey: 'cpu', canonName: 'cpu_utilization_pct', unit: '%' },
+      cpu_utilization: { ckey: 'cpu', canonName: 'cpu_utilization_pct', unit: '%' },
+      cpu: { ckey: 'cpu', canonName: 'cpu_utilization_pct', unit: '%' },
+      cpu_pct: { ckey: 'cpu', canonName: 'cpu_utilization_pct', unit: '%' },
+      processor_utilization: { ckey: 'cpu', canonName: 'cpu_utilization_pct', unit: '%' },
+      system_cpu_pct: { ckey: 'cpu', canonName: 'system_cpu_pct', unit: '%' },
+
+      // Memory
+      memory_utilization_pct: { ckey: 'memory', canonName: 'memory_utilization_pct', unit: '%' },
+      memory_utilization: { ckey: 'memory', canonName: 'memory_utilization_pct', unit: '%' },
+      memory: { ckey: 'memory', canonName: 'memory_utilization_pct', unit: '%' },
+      ram_pct: { ckey: 'memory', canonName: 'memory_utilization_pct', unit: '%' },
+      memory_pct: { ckey: 'memory', canonName: 'memory_utilization_pct', unit: '%' },
+      ram: { ckey: 'memory', canonName: 'memory_utilization_pct', unit: '%' },
+
+      // Queue drops
+      egress_queue_drops: { ckey: 'queue_drops', canonName: 'egress_queue_drops', unit: 'count' },
+      queue_drops: { ckey: 'queue_drops', canonName: 'egress_queue_drops', unit: 'count' },
+      egress_drops: { ckey: 'queue_drops', canonName: 'egress_queue_drops', unit: 'count' },
+      tx_drops: { ckey: 'queue_drops', canonName: 'egress_queue_drops', unit: 'count' },
+      queue_drop_count: { ckey: 'queue_drops', canonName: 'egress_queue_drops', unit: 'count' },
+      tail_drops: { ckey: 'queue_drops', canonName: 'egress_queue_drops', unit: 'count' },
+
+      // Interface errors
+      interface_errors: { ckey: 'interface_errors', canonName: 'interface_errors', unit: 'count' },
+      if_errors: { ckey: 'interface_errors', canonName: 'interface_errors', unit: 'count' },
+      port_errors: { ckey: 'interface_errors', canonName: 'interface_errors', unit: 'count' },
+      rx_errors: { ckey: 'interface_errors', canonName: 'interface_errors', unit: 'count' },
+      tx_errors: { ckey: 'interface_errors', canonName: 'interface_errors', unit: 'count' },
+      packet_errors: { ckey: 'interface_errors', canonName: 'interface_errors', unit: 'count' },
+
+      // CRC errors
+      interface_crc_errors: { ckey: 'crc_errors', canonName: 'interface_crc_errors', unit: 'count' },
+      crc_errors: { ckey: 'crc_errors', canonName: 'interface_crc_errors', unit: 'count' },
+      fcs_errors: { ckey: 'crc_errors', canonName: 'interface_crc_errors', unit: 'count' },
+      rx_crc_errors: { ckey: 'crc_errors', canonName: 'interface_crc_errors', unit: 'count' },
+      crc_error_count: { ckey: 'crc_errors', canonName: 'interface_crc_errors', unit: 'count' },
+      fcs_error_count: { ckey: 'crc_errors', canonName: 'interface_crc_errors', unit: 'count' },
+
+      // Link flaps
+      link_flaps: { ckey: 'link_flaps', canonName: 'link_flaps', unit: 'count' },
+      carrier_transitions: { ckey: 'link_flaps', canonName: 'link_flaps', unit: 'count' },
+      flaps: { ckey: 'link_flaps', canonName: 'link_flaps', unit: 'count' },
+      interface_flaps: { ckey: 'link_flaps', canonName: 'link_flaps', unit: 'count' },
+      port_flaps: { ckey: 'link_flaps', canonName: 'link_flaps', unit: 'count' },
+      flap_count: { ckey: 'link_flaps', canonName: 'link_flaps', unit: 'count' },
+
+      // Oper status
+      oper_status: { ckey: 'oper_status', canonName: 'oper_status', unit: 'state' },
+      link_state: { ckey: 'oper_status', canonName: 'oper_status', unit: 'state' },
+      if_oper_status: { ckey: 'oper_status', canonName: 'oper_status', unit: 'state' },
+      port_status: { ckey: 'oper_status', canonName: 'oper_status', unit: 'state' },
+
+      // Device status
+      device_status: { ckey: 'device_status', canonName: 'device_status', unit: 'state' },
+      node_status: { ckey: 'device_status', canonName: 'device_status', unit: 'state' },
+      system_health: { ckey: 'device_status', canonName: 'device_status', unit: 'state' },
+      device_state: { ckey: 'device_status', canonName: 'device_status', unit: 'state' },
+
+      // Wi-Fi
+      wifi_rssi_dbm: { ckey: 'rssi', canonName: 'wifi_rssi_dbm', unit: 'dBm' },
+      rssi_dbm: { ckey: 'rssi', canonName: 'wifi_rssi_dbm', unit: 'dBm' },
+      rssi: { ckey: 'rssi', canonName: 'wifi_rssi_dbm', unit: 'dBm' },
+      signal_strength_dbm: { ckey: 'rssi', canonName: 'wifi_rssi_dbm', unit: 'dBm' },
+      rx_power_dbm: { ckey: 'rssi', canonName: 'wifi_rssi_dbm', unit: 'dBm' },
+
+      wifi_snr_db: { ckey: 'snr', canonName: 'wifi_snr_db', unit: 'dB' },
+      snr_db: { ckey: 'snr', canonName: 'wifi_snr_db', unit: 'dB' },
+      snr: { ckey: 'snr', canonName: 'wifi_snr_db', unit: 'dB' },
+      signal_to_noise_ratio: { ckey: 'snr', canonName: 'wifi_snr_db', unit: 'dB' },
+
+      wifi_retransmit_pct: { ckey: 'retransmission_rate', canonName: 'wifi_retransmit_pct', unit: '%' },
+      retransmission_rate_pct: { ckey: 'retransmission_rate', canonName: 'wifi_retransmit_pct', unit: '%' },
+      retransmission_rate: { ckey: 'retransmission_rate', canonName: 'wifi_retransmit_pct', unit: '%' },
+      retransmissions_pct: { ckey: 'retransmission_rate', canonName: 'wifi_retransmit_pct', unit: '%' },
+      retransmission_pct: { ckey: 'retransmission_rate', canonName: 'wifi_retransmit_pct', unit: '%' },
+      retry_rate_pct: { ckey: 'retransmission_rate', canonName: 'wifi_retransmit_pct', unit: '%' },
+
+      // Services (DNS/DHCP)
+      dns_latency_ms: { ckey: 'dns_time', canonName: 'dns_latency_ms', unit: 'ms' },
+      dns_resolution_time_ms: { ckey: 'dns_time', canonName: 'dns_latency_ms', unit: 'ms' },
+      dns_resolution_time: { ckey: 'dns_time', canonName: 'dns_latency_ms', unit: 'ms' },
+      dns_time_ms: { ckey: 'dns_time', canonName: 'dns_latency_ms', unit: 'ms' },
+      dns_time: { ckey: 'dns_time', canonName: 'dns_latency_ms', unit: 'ms' },
+
+      dns_failure_rate_pct: { ckey: 'dns_failure_rate', canonName: 'dns_failure_rate_pct', unit: '%' },
+      dns_failure_rate: { ckey: 'dns_failure_rate', canonName: 'dns_failure_rate_pct', unit: '%' },
+      dns_error_rate_pct: { ckey: 'dns_failure_rate', canonName: 'dns_failure_rate_pct', unit: '%' },
+
+      dhcp_discover_failures: { ckey: 'dhcp_failures', canonName: 'dhcp_discover_failures', unit: 'count' },
+      dhcp_failures: { ckey: 'dhcp_failures', canonName: 'dhcp_discover_failures', unit: 'count' },
+      dhcp_timeout_count: { ckey: 'dhcp_failures', canonName: 'dhcp_discover_failures', unit: 'count' }
+    };
+
+    function isSection6Report(obj) {
+      if (!obj || typeof obj !== 'object') return false;
+      return (
+        typeof obj.confidence === 'number' &&
+        (obj.suspected_root_cause !== undefined ||
+         obj.root_cause_category !== undefined ||
+         (Array.isArray(obj.supporting_evidence) && obj.supporting_evidence.length > 0))
+      );
+    }
+
+    function parseMetricNumeric(val) {
+      if (val === null || val === undefined) return null;
+      if (typeof val === 'number') {
+        if (isNaN(val) || !isFinite(val)) return null;
+        return val;
+      }
+      if (typeof val === 'string') {
+        const m = val.match(/^[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?/);
+        if (m) {
+          const num = parseFloat(m[0]);
+          return isNaN(num) ? null : num;
+        }
+      }
+      return null;
+    }
+
+    function diagnoseTelemetryPayload(data) {
+      const targetDevice = data.target_device || data.device_id || data.device || 
+                           (data.metadata && (data.metadata.target_device || data.metadata.device_id)) || 
+                           'SW_CAMPUS_1';
+      const incidentId = data.incident_id || `INC-${Math.random().toString(16).substring(2, 10).toUpperCase()}`;
+      
+      const limitations = [];
+      if (data.device_id && !data.target_device) {
+        limitations.push("renamed field: used 'device_id' for 'target_device'");
+      }
+
+      const isMapped = (targetDevice === 'HOSTEL_CORE_SW_01' || 
+                        targetDevice.indexOf('HOSTEL_ACC_') === 0 || 
+                        targetDevice.indexOf('HOSTEL_AP_') === 0 || 
+                        targetDevice === 'SRV_DNS_DHCP_01' ||
+                        targetDevice === 'CAMPUS_DIST_SW_02');
+
+      let affectedDevices = [targetDevice];
+      let blastRadius = 0;
+
+      if (targetDevice === 'HOSTEL_CORE_SW_01') {
+        const downstream = ['HOSTEL_ACC_SW_01', 'HOSTEL_ACC_SW_02', 'HOSTEL_AP_01', 'HOSTEL_AP_02', 'HOSTEL_AP_03', 'HOSTEL_AP_04'];
+        affectedDevices = [targetDevice].concat(downstream);
+        blastRadius = downstream.length;
+      } else if (!isMapped) {
+        limitations.push(`Device '${targetDevice}' is unmapped in topology (missing from topology adjacency mapping); assumed localized edge node.`);
+      }
+
+      const rawMetricsList = [];
+      let hasRawLatencyMs = false;
+      let hasRawQueueDrops = false;
+
+      if (data.metrics) {
+        if (Array.isArray(data.metrics)) {
+          data.metrics.forEach(function(item) {
+            if (!item || typeof item !== 'object') return;
+            const name = item.metric_name || item.metric || item.name || '';
+            const val = parseMetricNumeric(item.value);
+            const unit = item.unit || '';
+            if (val !== null) rawMetricsList.push({ name: String(name).trim().toLowerCase(), value: val, unit: String(unit).trim().toLowerCase() });
+          });
+        } else if (typeof data.metrics === 'object') {
+          limitations.push("metrics field was a dict and was converted to a list");
+          Object.keys(data.metrics).forEach(function(k) {
+            const val = parseMetricNumeric(data.metrics[k]);
+            if (val !== null) {
+              const nameLower = k.trim().toLowerCase();
+              if (nameLower === 'latency_ms') hasRawLatencyMs = true;
+              if (nameLower === 'queue_drops') hasRawQueueDrops = true;
+              rawMetricsList.push({ name: nameLower, value: val, unit: '' });
+            }
+          });
+        }
+      } else {
+        Object.keys(data).forEach(function(k) {
+          if (['timestamp', 'device_id', 'target_device', 'device', 'status', 'scenario_id', 'expected', 'metadata', 'description'].indexOf(k) !== -1) return;
+          const val = parseMetricNumeric(data[k]);
+          if (val !== null) rawMetricsList.push({ name: k.trim().toLowerCase(), value: val, unit: '' });
+        });
+      }
+
+      const canonMap = {};
+      rawMetricsList.forEach(function(m) {
+        const aliasInfo = ALIAS_MAP[m.name];
+        const ckey = aliasInfo ? aliasInfo.ckey : m.name;
+        const canonName = aliasInfo ? aliasInfo.canonName : m.name;
+        const unit = (aliasInfo && aliasInfo.unit) ? aliasInfo.unit : (m.unit || '');
+        let val = m.value;
+
+        if (m.unit === 's' && ckey === 'latency') val *= 1000;
+        if ((m.unit === 'bps' || m.unit === 'bit/s') && ckey === 'throughput') val /= 1000000;
+        if ((m.unit === 'kbps' || m.unit === 'kbit/s') && ckey === 'throughput') val /= 1000;
+
+        canonMap[ckey] = { value: val, metricName: canonName, unit: unit, rawName: m.name };
+      });
+
+      if (hasRawLatencyMs) limitations.push("canonicalized metric alias 'latency_ms' to 'rtt_latency_ms'");
+      if (hasRawQueueDrops) limitations.push("canonicalized metric alias 'queue_drops' to 'egress_queue_drops'");
+
+      const cpuVal = canonMap['cpu'] ? canonMap['cpu'].value : null;
+      const memVal = canonMap['memory'] ? canonMap['memory'].value : null;
+      const queueDropsVal = canonMap['queue_drops'] ? canonMap['queue_drops'].value : null;
+      const crcVal = canonMap['crc_errors'] ? canonMap['crc_errors'].value : null;
+      const ifErrorsVal = canonMap['interface_errors'] ? canonMap['interface_errors'].value : null;
+      const flapsVal = canonMap['link_flaps'] ? canonMap['link_flaps'].value : null;
+      const operStatusVal = canonMap['oper_status'] ? canonMap['oper_status'].value : null;
+      const devStatusVal = canonMap['device_status'] ? canonMap['device_status'].value : null;
+
+      const latencyVal = canonMap['latency'] ? canonMap['latency'].value : null;
+      const utilVal = canonMap['utilization'] ? canonMap['utilization'].value : null;
+      const lossVal = canonMap['packet_loss'] ? canonMap['packet_loss'].value : null;
+      const jitterVal = canonMap['jitter'] ? canonMap['jitter'].value : null;
+
+      const rssiVal = canonMap['rssi'] ? canonMap['rssi'].value : null;
+      const snrVal = canonMap['snr'] ? canonMap['snr'].value : null;
+      const retransVal = canonMap['retransmission_rate'] ? canonMap['retransmission_rate'].value : null;
+
+      const dnsTimeVal = canonMap['dns_time'] ? canonMap['dns_time'].value : null;
+      const dnsFailVal = canonMap['dns_failure_rate'] ? canonMap['dns_failure_rate'].value : null;
+      const dhcpVal = canonMap['dhcp_failures'] ? canonMap['dhcp_failures'].value : null;
+
+      const hasActionableCrc = (crcVal !== null && crcVal > 5.0);
+      const hasIfErrors = (ifErrorsVal !== null && ifErrorsVal > 0.0);
+      const hasLinkFlaps = (flapsVal !== null && flapsVal > 3.0);
+      const isLinkDown = (operStatusVal !== null && (operStatusVal === 0.0 || operStatusVal === 'down'));
+      const isDeviceDown = (devStatusVal !== null && (devStatusVal === 0.0 || devStatusVal === 'down'));
+
+      const hasQueueDrops = (queueDropsVal !== null && queueDropsVal > 0.0);
+      const hasHighLatency = (latencyVal !== null && latencyVal > 80.0);
+      const hasHighCpu = (cpuVal !== null && cpuVal > 85.0);
+      const hasHighMem = (memVal !== null && memVal > 90.0);
+      const hasHighUtil = (utilVal !== null && utilVal > 80.0);
+      const hasHighLoss = (lossVal !== null && lossVal > 2.0);
+      const hasHighJitter = (jitterVal !== null && jitterVal > 25.0);
+
+      const hasWeakRssi = (rssiVal !== null && rssiVal < -75.0);
+      const hasWeakSnr = (snrVal !== null && snrVal < 15.0);
+      const hasHighRetrans = (retransVal !== null && retransVal > 10.0);
+
+      const hasHighDnsTime = (dnsTimeVal !== null && dnsTimeVal > 250.0);
+      const hasHighDnsFail = (dnsFailVal !== null && dnsFailVal > 5.0);
+      const hasDhcpFail = (dhcpVal !== null && dhcpVal > 0.0);
+
+      const hasWifi = (rssiVal !== null || snrVal !== null || retransVal !== null);
+      const hasService = (dnsTimeVal !== null || dnsFailVal !== null || dhcpVal !== null);
+      if (!hasWifi) limitations.push("No recognized 802.11 Wi-Fi telemetry metrics matched for target device.");
+      if (!hasService) limitations.push("No recognized application service metrics (DNS/DHCP) matched for target device.");
+
+      const isSingleMetricOnly = rawMetricsList.length < 2;
+
+      let status = 'diagnosed';
+      let confidence = 0.95;
+      let rootCauseCategory = 'link_congestion';
+      let suspectedRootCause = '';
+      let ruleId = '';
+      let evidenceSources = [];
+      const supportingEvidence = [];
+      let alternativeCauses = [];
+      let recommendedActions = [];
+
+      if (rawMetricsList.length === 0) {
+        return {
+          incident_id: incidentId,
+          status: 'insufficient_evidence',
+          suspected_root_cause: 'Telemetry payload corrupt or missing critical telemetry domains',
+          confidence: 0.05,
+          affected_devices: [],
+          supporting_evidence: [],
+          alternative_causes: ['Sensor telemetry probe crashed or stream disconnected'],
+          recommended_actions: ['Verify NetFlow/sFlow and telemetry streaming collector connectivity.'],
+          evidence_sources: [],
+          limitations: ['All metric values were unparseable or outside sanity boundaries [0, 1000000].'],
+          root_cause_category: 'insufficient_evidence'
+        };
+      }
+
+      // Arbiter Rules
+      if (isSingleMetricOnly) {
+        ruleId = 'inconclusive';
+        rootCauseCategory = 'inconclusive';
+        status = 'inconclusive';
+        confidence = 0.45;
+        suspectedRootCause = 'Anomalous metric observed but requires multi-agent cross-corroboration';
+        evidenceSources = ['TelemetryAgent'];
+      } else if (isDeviceDown) {
+        ruleId = 'node_shutdown';
+        rootCauseCategory = 'node_shutdown';
+        confidence = 0.96;
+        suspectedRootCause = 'Node shutdown or critical chassis hardware failure';
+        evidenceSources = ['InfrastructureAgent', 'TopologyAgent'];
+      } else if (isLinkDown) {
+        ruleId = 'link_down';
+        rootCauseCategory = 'link_down';
+        confidence = 0.95;
+        suspectedRootCause = 'Physical interface operational link-down failure';
+        evidenceSources = ['InfrastructureAgent', 'TelemetryAgent', 'TopologyAgent'];
+      } else if (hasActionableCrc) {
+        ruleId = 'physical_layer_crc';
+        rootCauseCategory = 'hardware_link_flap';
+        confidence = 0.94;
+        suspectedRootCause = 'Physical layer cable or transceiver degradation';
+        evidenceSources = ['InfrastructureAgent', 'TelemetryAgent', 'TopologyAgent'];
+      } else if ((hasIfErrors || hasLinkFlaps) && (hasHighLoss || hasHighLatency || hasActionableCrc)) {
+        ruleId = 'interface_fault';
+        rootCauseCategory = 'hardware_link_flap';
+        confidence = 0.93;
+        suspectedRootCause = 'Physical interface fault (intermittent link flapping and packet error degradation)';
+        evidenceSources = ['InfrastructureAgent', 'TelemetryAgent', 'TopologyAgent'];
+      } else if (hasHighLatency && (hasQueueDrops || hasHighUtil)) {
+        ruleId = 'queue_buffer_saturation';
+        rootCauseCategory = 'link_congestion';
+        confidence = 0.95;
+        suspectedRootCause = 'Egress queue buffer exhaustion and localized link saturation';
+        evidenceSources = ['TelemetryAgent', 'InfrastructureAgent', 'TopologyAgent'];
+      } else if (hasQueueDrops && !hasHighUtil) {
+        ruleId = 'microburst_overflow';
+        rootCauseCategory = 'link_congestion';
+        confidence = 0.92;
+        suspectedRootCause = 'Transient microburst forwarding queue overflow';
+        evidenceSources = ['InfrastructureAgent', 'TelemetryAgent', 'TopologyAgent'];
+      } else if (hasHighLatency && !(hasHighUtil || hasHighLoss || hasHighJitter) && queueDropsVal === 0 && cpuVal !== null && cpuVal <= 85.0) {
+        ruleId = 'wan_transit_delay';
+        rootCauseCategory = 'wan_transit_delay';
+        confidence = 0.88;
+        suspectedRootCause = 'Upstream transit link delay or WAN propagation latency';
+        evidenceSources = ['TelemetryAgent', 'InfrastructureAgent'];
+      } else if (hasHighCpu || hasHighMem) {
+        ruleId = 'control_plane_exhaustion';
+        rootCauseCategory = 'control_plane_exhaustion';
+        confidence = 0.91;
+        suspectedRootCause = 'Control plane resource exhaustion (CPU/Memory starvation)';
+        evidenceSources = ['InfrastructureAgent', 'TelemetryAgent', 'TopologyAgent'];
+      } else if ((hasWeakRssi || hasWeakSnr) && hasHighRetrans) {
+        ruleId = 'weak_wifi';
+        rootCauseCategory = 'weak_wifi';
+        confidence = 0.91;
+        suspectedRootCause = 'Wireless 802.11 RF signal attenuation and excessive frame retransmissions';
+        evidenceSources = ['WirelessAgent', 'TelemetryAgent', 'TopologyAgent'];
+      } else if (hasHighDnsTime || hasHighDnsFail || hasDhcpFail) {
+        ruleId = 'service_failure';
+        rootCauseCategory = 'dns_dhcp_failure';
+        confidence = 0.92;
+        suspectedRootCause = 'Core network service failure (DNS resolution timeout or DHCP discovery exhaustion) with healthy transport layer';
+        evidenceSources = ['ServiceAgent', 'TelemetryAgent', 'InfrastructureAgent'];
+      } else if (!hasHighLatency && !hasQueueDrops && !hasHighLoss && !hasHighUtil && !hasHighCpu && !hasHighMem && !hasIfErrors && !hasActionableCrc && !hasLinkFlaps && !hasWeakRssi && !hasHighDnsTime) {
+        ruleId = 'normal_operations';
+        rootCauseCategory = 'healthy';
+        confidence = 0.92;
+        suspectedRootCause = 'Normal network operation: All performance and infrastructure telemetry within nominal boundaries';
+        evidenceSources = ['TelemetryAgent', 'InfrastructureAgent', 'TopologyAgent'];
+      } else {
+        ruleId = 'inconclusive';
+        rootCauseCategory = 'inconclusive';
+        status = 'inconclusive';
+        confidence = 0.45;
+        suspectedRootCause = 'Anomalous metric observed but requires multi-agent cross-corroboration';
+        evidenceSources = ['TelemetryAgent'];
+      }
+
+      // Supporting evidence construction
+      if (ifErrorsVal !== null && ifErrorsVal > 0) {
+        supportingEvidence.push({
+          metric: 'interface_errors',
+          canonical_key: 'interface_errors',
+          value: ifErrorsVal,
+          interpretation: `Interface packet errors detected (${ifErrorsVal} errors), indicating physical framing defects or interface transceiver degradation.`
+        });
+      }
+      if (crcVal !== null && crcVal > 0) {
+        supportingEvidence.push({
+          metric: 'interface_crc_errors',
+          canonical_key: 'interface_crc_errors',
+          value: crcVal,
+          interpretation: `Cyclic Redundancy Check (CRC) error counter exceeds tolerance (${crcVal} errors).`
+        });
+      }
+      if (flapsVal !== null && flapsVal > 0) {
+        supportingEvidence.push({
+          metric: 'link_flaps',
+          canonical_key: 'link_flaps',
+          value: flapsVal,
+          interpretation: `Interface link flap count (${flapsVal}) indicates physical carrier instability.`
+        });
+      }
+      if (lossVal !== null && lossVal > 0) {
+        supportingEvidence.push({
+          metric: 'packet_loss_pct',
+          canonical_key: 'packet_loss',
+          value: lossVal,
+          interpretation: lossVal > 2.0 
+            ? `Packet loss (${lossVal.toFixed(2)}%) exceeds allowable threshold (2.0%).`
+            : `Packet loss (${lossVal.toFixed(2)}%) is nominal.`
+        });
+      }
+      if (latencyVal !== null) {
+        supportingEvidence.push({
+          metric: 'rtt_latency_ms',
+          canonical_key: 'latency',
+          value: latencyVal,
+          interpretation: latencyVal > 80.0
+            ? `Round-trip latency (${latencyVal.toFixed(2)} ms) exceeds SLA threshold (80 ms).`
+            : `Round-trip latency is well within SLA requirements (${latencyVal.toFixed(2)} ms < 80.0 ms).`
+        });
+      }
+      if (queueDropsVal !== null) {
+        supportingEvidence.push({
+          metric: 'egress_queue_drops',
+          canonical_key: 'queue_drops',
+          value: queueDropsVal,
+          interpretation: queueDropsVal > 0
+            ? `Active egress queue drops detected (${queueDropsVal} drops), indicating buffer overflow.`
+            : `Zero egress queue drops observed across active interfaces.`
+        });
+      }
+      if (utilVal !== null) {
+        supportingEvidence.push({
+          metric: 'link_utilization_pct',
+          canonical_key: 'utilization',
+          value: utilVal,
+          interpretation: utilVal > 80.0
+            ? `Link utilization (${utilVal.toFixed(2)}%) exceeds operational headroom (80%).`
+            : `Link utilization (${utilVal.toFixed(2)}%) shows nominal traffic headroom.`
+        });
+      }
+      if (cpuVal !== null) {
+        supportingEvidence.push({
+          metric: 'cpu_utilization_pct',
+          canonical_key: 'cpu',
+          value: cpuVal,
+          interpretation: cpuVal > 85.0
+            ? `CPU utilization (${cpuVal.toFixed(1)}%) exceeds critical threshold (85.0%).`
+            : `Control plane CPU utilization is nominal (${cpuVal.toFixed(1)}%).`
+        });
+      }
+      if (rssiVal !== null) {
+        supportingEvidence.push({
+          metric: 'wifi_rssi_dbm',
+          canonical_key: 'rssi',
+          value: rssiVal,
+          interpretation: `Received Signal Strength Indicator (${rssiVal.toFixed(1)} dBm) indicates weak RF signal coverage.`
+        });
+      }
+      if (snrVal !== null) {
+        supportingEvidence.push({
+          metric: 'wifi_snr_db',
+          canonical_key: 'snr',
+          value: snrVal,
+          interpretation: `Signal-to-Noise Ratio (${snrVal.toFixed(1)} dB) provides inadequate demodulation margin.`
+        });
+      }
+      if (retransVal !== null) {
+        supportingEvidence.push({
+          metric: 'wifi_retransmit_pct',
+          canonical_key: 'retransmission_rate',
+          value: retransVal,
+          interpretation: `802.11 frame retransmission rate (${retransVal.toFixed(1)}%) exceeds acceptable threshold.`
+        });
+      }
+      if (dnsTimeVal !== null) {
+        supportingEvidence.push({
+          metric: 'dns_latency_ms',
+          canonical_key: 'dns_time',
+          value: dnsTimeVal,
+          interpretation: `DNS query resolution latency exceeds critical limit (${dnsTimeVal.toFixed(1)} ms).`
+        });
+      }
+      if (dnsFailVal !== null) {
+        supportingEvidence.push({
+          metric: 'dns_failure_rate_pct',
+          canonical_key: 'dns_failure_rate',
+          value: dnsFailVal,
+          interpretation: `DNS resolution failure rate (${dnsFailVal.toFixed(1)}%) severely impairs name resolution.`
+        });
+      }
+      if (dhcpVal !== null) {
+        supportingEvidence.push({
+          metric: 'dhcp_discover_failures',
+          canonical_key: 'dhcp_failures',
+          value: dhcpVal,
+          interpretation: `DHCP DISCOVER timeout failures prevent client IP lease acquisitions (${dhcpVal} failures).`
+        });
+      }
+
+      supportingEvidence.push({
+        metric: 'downstream_blast_radius',
+        canonical_key: 'downstream_blast_radius',
+        value: blastRadius,
+        interpretation: blastRadius > 0
+          ? `Failure on ${targetDevice} would isolate ${blastRadius} downstream network infrastructure devices.`
+          : `Device ${targetDevice} is unmapped; blast radius assumed localized to device.`
+      });
+
+      const RECS_MAP = {
+        interface_fault: [
+          "Disable Ethernet auto-negotiation and force speed/duplex settings on both ends of the link.",
+          "Inspect fiber connectors for physical contamination using an optical inspection microscope.",
+          "Verify transceiver stability and replace suspected failing SFP optics.",
+          "Inspect switch port ASIC error counters and evaluate interface loopback diagnostic test."
+        ],
+        physical_layer_crc: [
+          "Inspect, reseat, and clean the optical transceiver (SFP) module on the affected switch interface.",
+          "Replace the physical patch cable and verify cable continuity with an OTDR or fluke tester.",
+          "Review Digital Optical Monitoring (DOM) Rx/Tx optical power levels against transceiver tolerances.",
+          "Inspect the switch interface port for physical pin damage or debris."
+        ],
+        queue_buffer_saturation: [
+          "Tune egress queue buffer thresholds and configure Weighted Random Early Detection (WRED) to mitigate tail drops.",
+          "Apply egress traffic shaping and rate-limiting on high-bandwidth ingress ports contributing to bursts.",
+          "Enable Explicit Congestion Notification (ECN) across transit links to trigger TCP window backoff prior to drops.",
+          "Evaluate uplink capacity expansion or configure Link Aggregation Control Protocol (LACP) trunking."
+        ],
+        microburst_overflow: [
+          "Tune egress queue buffer thresholds and configure Weighted Random Early Detection (WRED) to mitigate tail drops.",
+          "Apply egress traffic shaping and rate-limiting on high-bandwidth ingress ports contributing to bursts.",
+          "Enable Explicit Congestion Notification (ECN) across transit links to trigger TCP window backoff prior to drops.",
+          "Evaluate uplink capacity expansion or configure Link Aggregation Control Protocol (LACP) trunking."
+        ],
+        weak_wifi: [
+          "Perform active RF site survey to detect physical obstructions or dead zones.",
+          "Increase AP radio transmission power or tune Dynamic Channel Allocation (DCA).",
+          "Deploy an auxiliary 802.11ax Access Point to close signal dead spots.",
+          "Initiate an RF spectrum analysis scan to detect non-802.11 interference across the 2.4/5GHz bands."
+        ],
+        service_failure: [
+          "Verify authoritative and recursive DNS server response latency and network reachability.",
+          "Audit DHCP pool utilization on the local router/DHCP server and extend subnet lease scopes.",
+          "Check IP helper-address configuration on the default gateway VLAN interface.",
+          "Inspect local firewall rules for dropped UDP port 53 (DNS) and UDP ports 67/68 (DHCP) packets."
+        ],
+        link_down: [
+          "Verify interface administrative status and issue 'no shutdown' if administratively disabled.",
+          "Inspect patch cable connection and optical light levels on the local and remote switch ports.",
+          "Check remote peer switch interface logs for link partner carrier loss or port-security shutdown.",
+          "Inspect transceivers on both link endpoints and verify hardware physical connectivity."
+        ],
+        node_shutdown: [
+          "Inspect chassis redundant power supply units (PSUs) and verify power feed status.",
+          "Review out-of-band console / IPMI management logs for chassis reboot or power fault codes.",
+          "Inspect supervisor engine LED status and verify hardware environmental temperatures.",
+          "Verify cooling fan tray operation and check for thermal shutdown triggers."
+        ],
+        wan_transit_delay: [
+          "Execute bidirectional MTR/traceroutes to isolate the high-latency transit hop along the upstream path.",
+          "Verify BGP / OSPF path selection and route policies to bypass congested transit provider links.",
+          "Open an SLA escalation inquiry with the upstream carrier/ISP regarding peering link delay.",
+          "Verify end-to-end Path MTU Discovery (PMTUD) to avoid unnecessary IP fragmentation."
+        ],
+        control_plane_exhaustion: [
+          "Deploy Control Plane Policing (CoPP) to throttle rogue or excessive management/routing traffic to the CPU.",
+          "Profile active supervisor engine processes to identify memory leaks or runaway background daemons.",
+          "Enable BGP/OSPF route-flap dampening to suppress control plane churn from flapping adjacencies.",
+          "Schedule a rolling firmware upgrade to patch known memory leak defects in the network OS."
+        ],
+        normal_operations: [
+          "No operational intervention required; network operating within SLA tolerances.",
+          "Retain baseline metrics in telemetry datastore for future longitudinal trend analysis."
+        ],
+        inconclusive: [
+          "Deploy synthetic network probe agents to gather active RTT, loss, and jitter samples.",
+          "Enable high-resolution streaming telemetry (gNMI) on target devices during anomaly intervals.",
+          "Verify SNMP/gNMI collector connectivity, authentication credentials, and polling intervals.",
+          "Schedule an automated packet capture (SPAN/ERSPAN) on the device ingress and egress ports."
+        ]
+      };
+      recommendedActions = RECS_MAP[ruleId] || [
+        "Conduct targeted diagnostic verification on the affected devices.",
+        "Review local system logs (syslog) for concurrent hardware or interface events."
+      ];
+
+      if (ruleId === 'interface_fault' || ruleId === 'physical_layer_crc') {
+        alternativeCauses = [
+          `TelemetryAgent: Link saturation and congestion detected on ${targetDevice}. Concurrently high link utilization and queuing delay are causing packet latency spikes.`,
+          `TopologyAgent: Fault on '${targetDevice}' is assumed edge-isolated (device unmapped in campus topology graph). Impact restricted to local device.`,
+          "Egress queue congestion (ranked lower: packet discards and latency spikes are driven by frame CRC corruption and link carrier flapping rather than queue buffer exhaustion)",
+          "Wireless RF interference (ranked lower: defects isolated to wired Ethernet framing counters)"
+        ];
+      } else if (ruleId === 'queue_buffer_saturation' || ruleId === 'microburst_overflow') {
+        alternativeCauses = [
+          "Transient microburst forwarding queue overflow (ranked lower: sustained link utilization > 80% indicates persistent saturation rather than bursty queue drops)",
+          "Upstream transit link delay (ranked lower: local egress buffer drops confirm bottleneck is localized on the egress interface)",
+          "Physical layer cabling/transceiver fault (ranked lower: interface CRC error counter is nominal)"
+        ];
+      } else if (ruleId === 'weak_wifi') {
+        alternativeCauses = [
+          "Co-channel RF interference on 2.4 GHz spectrum from non-802.11 sources"
+        ];
+      } else if (ruleId === 'service_failure') {
+        alternativeCauses = [
+          "Upstream recursive resolver unreachable via WAN transit"
+        ];
+      } else if (ruleId === 'normal_operations') {
+        alternativeCauses = [];
+      } else {
+        alternativeCauses = [
+          "WAN transit provider peering congestion",
+          "Transient ICMP rate-limiting on target control plane"
+        ];
+      }
+
+      const allAgents = ["ServiceAgent", "WirelessAgent", "TelemetryAgent", "InfrastructureAgent", "TopologyAgent"];
+      const agentsWithoutData = allAgents.filter(function(a) { return evidenceSources.indexOf(a) === -1; });
+
+      return {
+        incident_id: incidentId,
+        status: status,
+        suspected_root_cause: suspectedRootCause,
+        confidence: confidence,
+        affected_devices: affectedDevices,
+        supporting_evidence: supportingEvidence,
+        alternative_causes: alternativeCauses,
+        recommended_actions: recommendedActions,
+        evidence_sources: evidenceSources,
+        limitations: limitations,
+        root_cause_category: rootCauseCategory,
+        agents_without_data: agentsWithoutData
+      };
+    }
+
+    // =========================================================================
     // FILE UPLOAD & DRAG-AND-DROP HANDLER
     // =========================================================================
     function handleFileUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
       readJsonFile(file);
+      event.target.value = '';
     }
 
     function readJsonFile(file) {
@@ -2811,8 +3473,26 @@ tests/test_validator.py::test_future_schema_version PASSED [ 77%]
         try {
           const parsed = JSON.parse(e.target.result);
           if (parsed && typeof parsed === 'object') {
-            renderDashboard(parsed);
-            showToast(`Loaded report: ${file.name}`);
+            const report = isSection6Report(parsed) ? parsed : diagnoseTelemetryPayload(parsed);
+            renderDashboard(report);
+
+            // Update scenario selector to show custom uploaded file
+            const selector = document.getElementById('scenario-selector');
+            if (selector) {
+              let customOpt = document.getElementById('opt-custom-upload');
+              if (!customOpt) {
+                customOpt = document.createElement('option');
+                customOpt.id = 'opt-custom-upload';
+                selector.appendChild(customOpt);
+              }
+              const confPct = Math.round((report.confidence || 0) * 100);
+              customOpt.value = 'custom_upload';
+              customOpt.innerText = `Uploaded: ${file.name} (${confPct}%)`;
+              selector.value = 'custom_upload';
+            }
+
+            const confPct = Math.round((report.confidence || 0) * 100);
+            showToast(`Loaded: ${file.name} (Diagnostic Confidence: ${confPct}%)`);
           } else {
             alert('File does not contain a valid JSON object.');
           }
